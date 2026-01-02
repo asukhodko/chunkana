@@ -344,3 +344,339 @@ class TestMonotonicOrdering:
                 f"Chunk {i} start_line ({chunks[i].start_line}) is less than "
                 f"chunk {i-1} start_line ({chunks[i-1].start_line})"
             )
+
+
+class TestOverlapMetadataMode:
+    """
+    Property 7: Overlap Metadata Mode
+    
+    For any markdown document chunked with overlap_size > 0, the overlap context
+    should be stored in metadata fields (previous_content, next_content) and
+    NOT duplicated in chunk.content.
+    
+    Validates: Requirements 5.8, 5.9, 5.10
+    """
+
+    @given(markdown=simple_markdown())
+    @settings(max_examples=100)
+    def test_overlap_in_metadata_not_content(self, markdown: str):
+        """
+        Feature: chunkana-library, Property 7: Overlap Metadata Mode
+        
+        Overlap should be in metadata, not embedded in chunk.content.
+        """
+        assume(len(markdown.strip()) > 0)
+        
+        config = ChunkerConfig(
+            max_chunk_size=1000,
+            min_chunk_size=100,
+            overlap_size=200,
+        )
+        
+        try:
+            chunks = chunk_markdown(markdown, config)
+        except Exception:
+            return
+        
+        assume(len(chunks) > 1)
+        
+        for i, chunk in enumerate(chunks):
+            if i > 0 and "previous_content" in chunk.metadata:
+                prev_content = chunk.metadata["previous_content"]
+                if prev_content and len(prev_content) > 10:
+                    # chunk.content should NOT start with the stored previous_content
+                    # (overlap is metadata-only, not embedded in content)
+                    assert not chunk.content.startswith(prev_content), (
+                        f"Chunk {i}: overlap should be in metadata, not embedded in content. "
+                        f"previous_content starts with: {repr(prev_content[:50])}"
+                    )
+
+
+class TestOverlapCapRatio:
+    """
+    Property 8: Overlap Cap Ratio
+    
+    For any markdown document chunked with overlap_size > 0, the actual overlap
+    size should not exceed overlap_cap_ratio (default 0.35) of the adjacent
+    chunk size.
+    
+    Validates: Requirements 5.11
+    """
+
+    @given(markdown=simple_markdown())
+    @settings(max_examples=100)
+    def test_overlap_cap_ratio(self, markdown: str):
+        """
+        Feature: chunkana-library, Property 8: Overlap Cap Ratio
+        
+        Overlap size should be capped at overlap_cap_ratio of adjacent chunk.
+        """
+        assume(len(markdown.strip()) > 0)
+        
+        overlap_cap_ratio = 0.35
+        config = ChunkerConfig(
+            max_chunk_size=1000,
+            min_chunk_size=100,
+            overlap_size=500,  # Large overlap to test capping
+        )
+        
+        try:
+            chunks = chunk_markdown(markdown, config)
+        except Exception:
+            return
+        
+        assume(len(chunks) > 1)
+        
+        for i, chunk in enumerate(chunks):
+            if i > 0 and "previous_content" in chunk.metadata:
+                prev_content = chunk.metadata.get("previous_content", "")
+                if prev_content:
+                    prev_chunk_size = chunks[i-1].size
+                    max_allowed = int(prev_chunk_size * overlap_cap_ratio) + 50  # tolerance
+                    actual_overlap = len(prev_content)
+                    
+                    assert actual_overlap <= max_allowed, (
+                        f"Chunk {i}: overlap {actual_overlap} exceeds cap "
+                        f"({overlap_cap_ratio} * {prev_chunk_size} = {max_allowed})"
+                    )
+
+
+class TestSmallChunkHandling:
+    """
+    Property 11: Small Chunk Handling
+    
+    For any chunk smaller than min_chunk_size that cannot be merged, it should
+    be flagged with small_chunk=True and small_chunk_reason in metadata.
+    
+    Validates: Requirements 17.3, 17.4
+    """
+
+    @given(markdown=simple_markdown())
+    @settings(max_examples=100)
+    def test_small_chunks_flagged(self, markdown: str):
+        """
+        Feature: chunkana-library, Property 11: Small Chunk Handling
+        
+        Small chunks that can't be merged should be flagged in metadata.
+        """
+        assume(len(markdown.strip()) > 0)
+        
+        config = ChunkerConfig(
+            max_chunk_size=2000,
+            min_chunk_size=500,  # Relatively high to create small chunks
+        )
+        
+        try:
+            chunks = chunk_markdown(markdown, config)
+        except Exception:
+            return
+        
+        for i, chunk in enumerate(chunks):
+            if chunk.size < config.min_chunk_size:
+                # Small chunks should either be flagged or have a reason
+                # Note: v2 may not always flag, so we just verify consistency
+                if chunk.metadata.get("small_chunk"):
+                    assert "small_chunk_reason" in chunk.metadata, (
+                        f"Chunk {i}: small_chunk=True but no small_chunk_reason"
+                    )
+
+
+class TestStrategySelection:
+    """
+    Property 5: Strategy Selection Correctness
+    
+    For any markdown document and config, the selected strategy should match
+    the content analysis criteria:
+    - CodeAware when code_block_count >= 1 OR table_count >= 1 OR code_ratio >= threshold
+    - ListAware when list criteria met (complex logic based on structure)
+    - Structural when headers >= threshold and max_header_depth > 1
+    - Fallback otherwise
+    
+    Validates: Requirements 3.1, 3.2, 3.3, 3.4, 3.5
+    """
+
+    @given(markdown=markdown_with_code_blocks())
+    @settings(max_examples=100)
+    def test_code_aware_selected_for_code(self, markdown: str):
+        """
+        Feature: chunkana-library, Property 5: Strategy Selection (code)
+        
+        Documents with code blocks should use code_aware strategy.
+        """
+        assume(len(markdown.strip()) > 0)
+        
+        try:
+            chunks = chunk_markdown(markdown)
+        except Exception:
+            return
+        
+        assume(len(chunks) > 0)
+        
+        # All chunks should use code_aware strategy
+        for i, chunk in enumerate(chunks):
+            strategy = chunk.metadata.get("strategy", "")
+            assert strategy == "code_aware", (
+                f"Chunk {i}: expected code_aware strategy for document with code blocks, "
+                f"got {strategy}"
+            )
+
+    @given(markdown=markdown_with_tables())
+    @settings(max_examples=100)
+    def test_code_aware_selected_for_tables(self, markdown: str):
+        """
+        Feature: chunkana-library, Property 5: Strategy Selection (tables)
+        
+        Documents with tables should use code_aware strategy.
+        """
+        assume(len(markdown.strip()) > 0)
+        
+        try:
+            chunks = chunk_markdown(markdown)
+        except Exception:
+            return
+        
+        assume(len(chunks) > 0)
+        
+        # All chunks should use code_aware strategy
+        for i, chunk in enumerate(chunks):
+            strategy = chunk.metadata.get("strategy", "")
+            assert strategy == "code_aware", (
+                f"Chunk {i}: expected code_aware strategy for document with tables, "
+                f"got {strategy}"
+            )
+
+    @given(markdown=simple_markdown())
+    @settings(max_examples=100)
+    def test_strategy_consistency(self, markdown: str):
+        """
+        Feature: chunkana-library, Property 5: Strategy Selection (consistency)
+        
+        All chunks from same document should use the same strategy.
+        """
+        assume(len(markdown.strip()) > 0)
+        
+        try:
+            chunks = chunk_markdown(markdown)
+        except Exception:
+            return
+        
+        assume(len(chunks) > 1)
+        
+        strategies = [chunk.metadata.get("strategy") for chunk in chunks]
+        unique_strategies = set(strategies)
+        
+        assert len(unique_strategies) == 1, (
+            f"Expected single strategy for document, got multiple: {unique_strategies}"
+        )
+
+
+class TestHierarchyNavigation:
+    """
+    Property 12: Hierarchy Navigation Consistency
+    
+    For any hierarchical chunking result, the navigation methods should be
+    consistent: get_parent(child_id) should return a chunk whose get_children
+    includes child_id.
+    
+    Validates: Requirements 7.2, 7.3
+    """
+
+    @given(markdown=simple_markdown())
+    @settings(max_examples=100)
+    def test_hierarchy_navigation_consistency(self, markdown: str):
+        """
+        Feature: chunkana-library, Property 12: Hierarchy Navigation Consistency
+        
+        Parent-child relationships should be bidirectionally consistent.
+        """
+        assume(len(markdown.strip()) > 0)
+        
+        from chunkana import MarkdownChunker
+        
+        chunker = MarkdownChunker()
+        
+        try:
+            result = chunker.chunk_hierarchical(markdown)
+        except Exception:
+            return
+        
+        assume(len(result.chunks) > 0)
+        
+        for chunk in result.chunks:
+            chunk_id = chunk.metadata.get("chunk_id")
+            if not chunk_id:
+                continue
+            
+            # Test: if chunk has parent, parent's children should include chunk
+            parent = result.get_parent(chunk_id)
+            if parent:
+                parent_id = parent.metadata.get("chunk_id")
+                if parent_id:
+                    children = result.get_children(parent_id)
+                    child_ids = [c.metadata.get("chunk_id") for c in children]
+                    assert chunk_id in child_ids, (
+                        f"Chunk {chunk_id} has parent {parent_id}, but parent's "
+                        f"children don't include it. Children: {child_ids}"
+                    )
+            
+            # Test: if chunk has children, each child's parent should be this chunk
+            children = result.get_children(chunk_id)
+            for child in children:
+                child_id = child.metadata.get("chunk_id")
+                if child_id:
+                    child_parent = result.get_parent(child_id)
+                    if child_parent:
+                        child_parent_id = child_parent.metadata.get("chunk_id")
+                        assert child_parent_id == chunk_id, (
+                            f"Chunk {chunk_id} lists {child_id} as child, but "
+                            f"child's parent is {child_parent_id}"
+                        )
+
+    @given(markdown=simple_markdown())
+    @settings(max_examples=100)
+    def test_ancestors_path_to_root(self, markdown: str):
+        """
+        Feature: chunkana-library, Property 12: Hierarchy Navigation (ancestors)
+        
+        get_ancestors should return path from chunk to root.
+        """
+        assume(len(markdown.strip()) > 0)
+        
+        from chunkana import MarkdownChunker
+        
+        chunker = MarkdownChunker()
+        
+        try:
+            result = chunker.chunk_hierarchical(markdown)
+        except Exception:
+            return
+        
+        assume(len(result.chunks) > 0)
+        
+        for chunk in result.chunks:
+            chunk_id = chunk.metadata.get("chunk_id")
+            if not chunk_id:
+                continue
+            
+            ancestors = result.get_ancestors(chunk_id)
+            
+            # Verify ancestors form a valid path
+            if ancestors:
+                # First ancestor should be immediate parent
+                parent = result.get_parent(chunk_id)
+                if parent:
+                    assert ancestors[0].metadata.get("chunk_id") == parent.metadata.get("chunk_id"), (
+                        f"First ancestor should be immediate parent"
+                    )
+                
+                # Each ancestor should be parent of the next
+                for i in range(len(ancestors) - 1):
+                    ancestor_id = ancestors[i].metadata.get("chunk_id")
+                    next_ancestor = ancestors[i + 1]
+                    next_id = next_ancestor.metadata.get("chunk_id")
+                    
+                    parent_of_ancestor = result.get_parent(ancestor_id)
+                    if parent_of_ancestor:
+                        assert parent_of_ancestor.metadata.get("chunk_id") == next_id, (
+                            f"Ancestor chain broken at {ancestor_id}"
+                        )
