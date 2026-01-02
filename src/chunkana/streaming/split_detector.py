@@ -4,7 +4,6 @@ Safe split point detection for streaming processing.
 Detects optimal boundaries for splitting buffer windows.
 """
 
-from typing import List, Optional
 
 from .fence_tracker import FenceTracker
 
@@ -25,7 +24,7 @@ class SplitDetector:
         """
         self.threshold = threshold
 
-    def find_split_point(self, buffer: List[str], fence_tracker: FenceTracker) -> int:
+    def find_split_point(self, buffer: list[str], fence_tracker: FenceTracker) -> int:
         """
         Find safe split point in buffer.
 
@@ -62,7 +61,7 @@ class SplitDetector:
         # Fallback: split at threshold
         return self._fallback_split(start_idx)
 
-    def _try_split_at_header(self, buffer: List[str], start_idx: int) -> Optional[int]:
+    def _try_split_at_header(self, buffer: list[str], start_idx: int) -> int | None:
         """Detect line before header."""
         for i in range(start_idx, len(buffer)):
             if i + 1 < len(buffer):
@@ -71,9 +70,7 @@ class SplitDetector:
                     return i + 1
         return None
 
-    def _try_split_at_paragraph(
-        self, buffer: List[str], start_idx: int
-    ) -> Optional[int]:
+    def _try_split_at_paragraph(self, buffer: list[str], start_idx: int) -> int | None:
         """Detect paragraph boundary."""
         for i in range(start_idx, len(buffer) - 1):
             if not buffer[i].strip() and buffer[i + 1].strip():
@@ -81,8 +78,8 @@ class SplitDetector:
         return None
 
     def _try_split_at_newline(
-        self, buffer: List[str], start_idx: int, fence_tracker: FenceTracker
-    ) -> Optional[int]:
+        self, buffer: list[str], start_idx: int, fence_tracker: FenceTracker
+    ) -> int | None:
         """Detect newline outside fence."""
         tracker_copy = FenceTracker()
         for i, line in enumerate(buffer):

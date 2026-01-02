@@ -78,16 +78,16 @@ class TestConfigSerialization:
         """to_dict should contain all configuration fields."""
         config = ChunkerConfig()
         d = config.to_dict()
-        
+
         # Core fields
         assert "max_chunk_size" in d
         assert "min_chunk_size" in d
         assert "overlap_size" in d
-        
+
         # Strategy thresholds
         assert "code_threshold" in d
         assert "structure_threshold" in d
-        
+
         # Code-context binding fields
         assert "enable_code_context_binding" in d
         assert "max_context_chars_before" in d
@@ -101,7 +101,7 @@ class TestConfigSerialization:
             "overlap_size": 100,
         }
         config = ChunkerConfig.from_dict(data)
-        
+
         assert config.max_chunk_size == 2048
         assert config.min_chunk_size == 256
         assert config.overlap_size == 100
@@ -115,9 +115,9 @@ class TestConfigSerialization:
             code_threshold=0.25,
             enable_code_context_binding=False,
         )
-        
+
         restored = ChunkerConfig.from_dict(original.to_dict())
-        
+
         assert restored.max_chunk_size == original.max_chunk_size
         assert restored.min_chunk_size == original.min_chunk_size
         assert restored.overlap_size == original.overlap_size
@@ -136,7 +136,7 @@ class TestConfigAlias:
         """Both ChunkerConfig and ChunkConfig should work."""
         config1 = ChunkerConfig(max_chunk_size=1000)
         config2 = ChunkConfig(max_chunk_size=1000)
-        
+
         assert type(config1) == type(config2)
         assert config1.max_chunk_size == config2.max_chunk_size
 
@@ -147,7 +147,7 @@ class TestCodeContextBindingConfig:
     def test_code_context_binding_defaults(self):
         """Code-context binding should have sensible defaults."""
         config = ChunkerConfig()
-        
+
         assert config.enable_code_context_binding is True
         assert config.max_context_chars_before > 0
         assert config.max_context_chars_after > 0
@@ -168,10 +168,10 @@ class TestCodeContextBindingConfig:
             bind_output_blocks=False,
             preserve_before_after_pairs=False,
         )
-        
+
         d = config.to_dict()
         restored = ChunkerConfig.from_dict(d)
-        
+
         assert restored.enable_code_context_binding == config.enable_code_context_binding
         assert restored.max_context_chars_before == config.max_context_chars_before
         assert restored.max_context_chars_after == config.max_context_chars_after
@@ -217,9 +217,9 @@ class TestOverlapCapRatioConfig:
         """overlap_cap_ratio should be preserved in to_dict/from_dict."""
         config = ChunkerConfig(overlap_cap_ratio=0.25)
         d = config.to_dict()
-        
+
         assert "overlap_cap_ratio" in d
         assert d["overlap_cap_ratio"] == 0.25
-        
+
         restored = ChunkerConfig.from_dict(d)
         assert restored.overlap_cap_ratio == 0.25

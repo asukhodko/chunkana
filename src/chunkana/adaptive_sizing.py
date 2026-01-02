@@ -6,7 +6,6 @@ content characteristics like code ratio, table presence, and text complexity.
 """
 
 from dataclasses import dataclass
-from typing import Optional
 
 from .types import ContentAnalysis
 
@@ -47,36 +46,25 @@ class AdaptiveSizeConfig:
 
         if self.min_scale >= self.max_scale:
             raise ValueError(
-                f"min_scale ({self.min_scale}) must be less than "
-                f"max_scale ({self.max_scale})"
+                f"min_scale ({self.min_scale}) must be less than max_scale ({self.max_scale})"
             )
 
         if self.code_weight < 0:
-            raise ValueError(
-                f"code_weight must be non-negative, got {self.code_weight}"
-            )
+            raise ValueError(f"code_weight must be non-negative, got {self.code_weight}")
 
         if self.table_weight < 0:
-            raise ValueError(
-                f"table_weight must be non-negative, got {self.table_weight}"
-            )
+            raise ValueError(f"table_weight must be non-negative, got {self.table_weight}")
 
         if self.list_weight < 0:
-            raise ValueError(
-                f"list_weight must be non-negative, got {self.list_weight}"
-            )
+            raise ValueError(f"list_weight must be non-negative, got {self.list_weight}")
 
         if self.sentence_length_weight < 0:
             raise ValueError(
-                f"sentence_length_weight must be non-negative, "
-                f"got {self.sentence_length_weight}"
+                f"sentence_length_weight must be non-negative, got {self.sentence_length_weight}"
             )
 
         weight_sum = (
-            self.code_weight
-            + self.table_weight
-            + self.list_weight
-            + self.sentence_length_weight
+            self.code_weight + self.table_weight + self.list_weight + self.sentence_length_weight
         )
         if abs(weight_sum - 1.0) > 0.001:
             raise ValueError(
@@ -94,7 +82,7 @@ class AdaptiveSizeCalculator:
     and optimal chunk sizes. All methods are pure functions with no side effects.
     """
 
-    def __init__(self, config: Optional[AdaptiveSizeConfig] = None):
+    def __init__(self, config: AdaptiveSizeConfig | None = None):
         """
         Initialize calculator with configuration.
 

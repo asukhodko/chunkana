@@ -6,7 +6,6 @@ to improve retrieval quality for table-heavy documents.
 """
 
 from dataclasses import dataclass
-from typing import List, Optional
 
 from .types import Header, TableBlock
 
@@ -36,19 +35,14 @@ class TableGroupingConfig:
         """Validate configuration parameters."""
         if self.max_distance_lines < 0:
             raise ValueError(
-                f"max_distance_lines must be non-negative, "
-                f"got {self.max_distance_lines}"
+                f"max_distance_lines must be non-negative, got {self.max_distance_lines}"
             )
 
         if self.max_grouped_tables < 1:
-            raise ValueError(
-                f"max_grouped_tables must be >= 1, got {self.max_grouped_tables}"
-            )
+            raise ValueError(f"max_grouped_tables must be >= 1, got {self.max_grouped_tables}")
 
         if self.max_group_size < 100:
-            raise ValueError(
-                f"max_group_size must be >= 100, got {self.max_group_size}"
-            )
+            raise ValueError(f"max_group_size must be >= 100, got {self.max_group_size}")
 
 
 @dataclass
@@ -63,7 +57,7 @@ class TableGroup:
         content: Combined content including tables and text between them
     """
 
-    tables: List[TableBlock]
+    tables: list[TableBlock]
     start_line: int
     end_line: int
     content: str
@@ -90,7 +84,7 @@ class TableGrouper:
     - Group doesn't exceed max_grouped_tables
     """
 
-    def __init__(self, config: Optional[TableGroupingConfig] = None):
+    def __init__(self, config: TableGroupingConfig | None = None):
         """
         Initialize TableGrouper.
 
@@ -101,10 +95,10 @@ class TableGrouper:
 
     def group_tables(
         self,
-        tables: List[TableBlock],
-        lines: List[str],
-        headers: List[Header],
-    ) -> List[TableGroup]:
+        tables: list[TableBlock],
+        lines: list[str],
+        headers: list[Header],
+    ) -> list[TableGroup]:
         """
         Group related tables.
 
@@ -122,17 +116,15 @@ class TableGrouper:
         if len(tables) == 1:
             return [self._create_single_table_group(tables[0], lines)]
 
-        groups: List[TableGroup] = []
-        current_tables: List[TableBlock] = [tables[0]]
+        groups: list[TableGroup] = []
+        current_tables: list[TableBlock] = [tables[0]]
         current_size = len(tables[0].content)
 
         for i in range(1, len(tables)):
             table = tables[i]
             prev_table = tables[i - 1]
 
-            if self._should_group(
-                prev_table, table, headers, current_size, len(current_tables)
-            ):
+            if self._should_group(prev_table, table, headers, current_size, len(current_tables)):
                 current_tables.append(table)
                 current_size += len(table.content)
             else:
@@ -146,9 +138,7 @@ class TableGrouper:
 
         return groups
 
-    def _create_single_table_group(
-        self, table: TableBlock, lines: List[str]
-    ) -> TableGroup:
+    def _create_single_table_group(self, table: TableBlock, lines: list[str]) -> TableGroup:
         """Create a group with a single table."""
         content = self._extract_content(table.start_line, table.end_line, lines)
         return TableGroup(
@@ -158,7 +148,7 @@ class TableGrouper:
             content=content,
         )
 
-    def _create_group(self, tables: List[TableBlock], lines: List[str]) -> TableGroup:
+    def _create_group(self, tables: list[TableBlock], lines: list[str]) -> TableGroup:
         """Create a group from multiple tables."""
         start_line = tables[0].start_line
         end_line = tables[-1].end_line
@@ -174,7 +164,7 @@ class TableGrouper:
         self,
         prev_table: TableBlock,
         table: TableBlock,
-        headers: List[Header],
+        headers: list[Header],
         current_size: int,
         current_count: int,
     ) -> bool:
@@ -214,26 +204,22 @@ class TableGrouper:
         self,
         prev_table: TableBlock,
         table: TableBlock,
-        headers: List[Header],
+        headers: list[Header],
     ) -> bool:
         """Check if there's no header between tables (if require_same_section)."""
         if not self.config.require_same_section:
             return True
 
-        return not self._has_header_between(
-            prev_table.end_line, table.start_line, headers
-        )
+        return not self._has_header_between(prev_table.end_line, table.start_line, headers)
 
-    def _has_header_between(
-        self, start_line: int, end_line: int, headers: List[Header]
-    ) -> bool:
+    def _has_header_between(self, start_line: int, end_line: int, headers: list[Header]) -> bool:
         """Check if there's a header between two lines."""
         for header in headers:
             if start_line < header.line < end_line:
                 return True
         return False
 
-    def _extract_content(self, start_line: int, end_line: int, lines: List[str]) -> str:
+    def _extract_content(self, start_line: int, end_line: int, lines: list[str]) -> str:
         """
         Extract content for a line range.
 
@@ -247,7 +233,7 @@ class TableGrouper:
         """
         return "\n".join(lines[start_line - 1 : end_line])
 
-    def _extract_group_content(self, tables: List[TableBlock], lines: List[str]) -> str:
+    def _extract_group_content(self, tables: list[TableBlock], lines: list[str]) -> str:
         """
         Extract content for a table group including text between tables.
 
@@ -267,25 +253,19 @@ class TableGrouper:
             return ""
 
         if len(tables) == 1:
-            return self._extract_content(
-                tables[0].start_line, tables[0].end_line, lines
-            )
+            return self._extract_content(tables[0].start_line, tables[0].end_line, lines)
 
-        parts: List[str] = []
+        parts: list[str] = []
 
         for i, table in enumerate(tables):
             # Add table content
-            table_content = self._extract_content(
-                table.start_line, table.end_line, lines
-            )
+            table_content = self._extract_content(table.start_line, table.end_line, lines)
             parts.append(table_content)
 
             # Add text between this table and next (if not last)
             if i < len(tables) - 1:
                 next_table = tables[i + 1]
-                between_content = self._get_text_between_tables(
-                    table, next_table, lines
-                )
+                between_content = self._get_text_between_tables(table, next_table, lines)
                 parts.append(between_content)
 
         return "\n".join(parts)
@@ -294,7 +274,7 @@ class TableGrouper:
         self,
         table1: TableBlock,
         table2: TableBlock,
-        lines: List[str],
+        lines: list[str],
     ) -> str:
         """
         Get normalized text between two tables.

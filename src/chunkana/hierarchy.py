@@ -7,7 +7,6 @@ Provides parent-child relationships and navigation methods for chunks.
 import hashlib
 import re
 from dataclasses import dataclass, field
-from typing import Dict, List, Optional
 
 from .types import Chunk
 
@@ -27,20 +26,18 @@ class HierarchicalChunkingResult:
         _index: Internal index for O(1) chunk lookup by ID
     """
 
-    chunks: List[Chunk]
+    chunks: list[Chunk]
     root_id: str
     strategy_used: str
-    _index: Dict[str, Chunk] = field(default_factory=dict, repr=False, init=False)
+    _index: dict[str, Chunk] = field(default_factory=dict, repr=False, init=False)
 
     def __post_init__(self) -> None:
         """Build index for O(1) lookups."""
         self._index = {
-            c.metadata.get("chunk_id"): c
-            for c in self.chunks
-            if c.metadata.get("chunk_id")
+            c.metadata.get("chunk_id"): c for c in self.chunks if c.metadata.get("chunk_id")
         }
 
-    def get_chunk(self, chunk_id: str) -> Optional[Chunk]:
+    def get_chunk(self, chunk_id: str) -> Chunk | None:
         """
         Get chunk by ID with O(1) lookup.
 
@@ -52,7 +49,7 @@ class HierarchicalChunkingResult:
         """
         return self._index.get(chunk_id)
 
-    def get_children(self, chunk_id: str) -> List[Chunk]:
+    def get_children(self, chunk_id: str) -> list[Chunk]:
         """
         Get all child chunks of given chunk.
 
@@ -69,7 +66,7 @@ class HierarchicalChunkingResult:
         children_ids = chunk.metadata.get("children_ids", [])
         return [self.get_chunk(cid) for cid in children_ids if self.get_chunk(cid)]
 
-    def get_parent(self, chunk_id: str) -> Optional[Chunk]:
+    def get_parent(self, chunk_id: str) -> Chunk | None:
         """
         Get parent chunk of given chunk.
 
@@ -86,7 +83,7 @@ class HierarchicalChunkingResult:
         parent_id = chunk.metadata.get("parent_id")
         return self.get_chunk(parent_id) if parent_id else None
 
-    def get_ancestors(self, chunk_id: str) -> List[Chunk]:
+    def get_ancestors(self, chunk_id: str) -> list[Chunk]:
         """
         Get all ancestor chunks from parent to root.
 
@@ -111,7 +108,7 @@ class HierarchicalChunkingResult:
 
         return ancestors
 
-    def get_siblings(self, chunk_id: str) -> List[Chunk]:
+    def get_siblings(self, chunk_id: str) -> list[Chunk]:
         """
         Get all sibling chunks (including self).
 
@@ -133,7 +130,7 @@ class HierarchicalChunkingResult:
 
         return self.get_children(parent_id)
 
-    def get_flat_chunks(self) -> List[Chunk]:
+    def get_flat_chunks(self) -> list[Chunk]:
         """
         Get only leaf chunks for backward-compatible retrieval.
 
@@ -184,7 +181,7 @@ class HierarchicalChunkingResult:
 
         return leaf_chunks
 
-    def get_by_level(self, level: int) -> List[Chunk]:
+    def get_by_level(self, level: int) -> list[Chunk]:
         """
         Get all chunks at specific hierarchy level.
 
@@ -198,7 +195,7 @@ class HierarchicalChunkingResult:
         """
         return [c for c in self.chunks if c.metadata.get("hierarchy_level") == level]
 
-    def to_tree_dict(self) -> Dict:
+    def to_tree_dict(self) -> dict:
         """
         Convert hierarchy to tree dictionary for serialization.
 
@@ -209,7 +206,7 @@ class HierarchicalChunkingResult:
             Nested dictionary representing tree structure
         """
 
-        def build_node(chunk_id: str) -> Dict:
+        def build_node(chunk_id: str) -> dict:
             chunk = self.get_chunk(chunk_id)
             if not chunk:
                 return {}
@@ -223,9 +220,7 @@ class HierarchicalChunkingResult:
                 "content_preview": content_preview,
                 "header_path": chunk.metadata.get("header_path", ""),
                 "level": chunk.metadata.get("hierarchy_level", 0),
-                "children": [
-                    build_node(cid) for cid in chunk.metadata.get("children_ids", [])
-                ],
+                "children": [build_node(cid) for cid in chunk.metadata.get("children_ids", [])],
             }
 
         return build_node(self.root_id)
@@ -240,9 +235,7 @@ class HierarchyBuilder:
     through method decomposition.
     """
 
-    def __init__(
-        self, include_document_summary: bool = True, validate_chains: bool = True
-    ):
+    def __init__(self, include_document_summary: bool = True, validate_chains: bool = True):
         """
         Initialize hierarchy builder.
 
@@ -253,9 +246,7 @@ class HierarchyBuilder:
         self.include_document_summary = include_document_summary
         self.validate_chains = validate_chains
 
-    def build(
-        self, chunks: List[Chunk], original_text: str
-    ) -> HierarchicalChunkingResult:
+    def build(self, chunks: list[Chunk], original_text: str) -> HierarchicalChunkingResult:
         """
         Build hierarchy from flat chunks. Complexity: < 8 (orchestration only).
 
@@ -297,11 +288,7 @@ class HierarchyBuilder:
             self._validate_parent_child_counts(all_chunks)
             self._validate_sibling_chains(all_chunks)
 
-        root_id = (
-            root_chunk.metadata["chunk_id"]
-            if root_chunk
-            else chunks[0].metadata["chunk_id"]
-        )
+        root_id = root_chunk.metadata["chunk_id"] if root_chunk else chunks[0].metadata["chunk_id"]
         strategy = chunks[0].metadata.get("strategy", "unknown") if chunks else "none"
 
         return HierarchicalChunkingResult(all_chunks, root_id, strategy)
@@ -322,7 +309,7 @@ class HierarchyBuilder:
         data = f"{content[:50]}:{index}".encode()
         return hashlib.sha256(data).hexdigest()[:8]
 
-    def _assign_ids(self, chunks: List[Chunk]) -> None:
+    def _assign_ids(self, chunks: list[Chunk]) -> None:
         """
         Assign chunk_id to all chunks. Complexity: < 5.
 
@@ -332,7 +319,7 @@ class HierarchyBuilder:
         for i, chunk in enumerate(chunks):
             chunk.metadata["chunk_id"] = self._generate_id(chunk.content, i)
 
-    def _create_root_chunk(self, text: str, chunks: List[Chunk]) -> Chunk:
+    def _create_root_chunk(self, text: str, chunks: list[Chunk]) -> Chunk:
         """
         Create document-level root chunk. Complexity: < 8.
 
@@ -371,9 +358,7 @@ class HierarchyBuilder:
         )
         return root_chunk
 
-    def _build_parent_child_links(
-        self, chunks: List[Chunk], root_chunk: Optional[Chunk]
-    ) -> None:
+    def _build_parent_child_links(self, chunks: list[Chunk], root_chunk: Chunk | None) -> None:
         """
         Build parent-child links via header_path. Complexity: < 10.
 
@@ -382,7 +367,7 @@ class HierarchyBuilder:
             root_chunk: Root chunk if created
         """
         # Index by header_path for O(1) parent lookup
-        path_to_chunk: Dict[str, Chunk] = {}
+        path_to_chunk: dict[str, Chunk] = {}
         for chunk in chunks:
             hp = chunk.metadata.get("header_path", "")
             if hp:
@@ -398,9 +383,7 @@ class HierarchyBuilder:
             if not hp or hp == "/__preamble__":
                 if root_chunk:
                     chunk.metadata["parent_id"] = root_chunk.metadata["chunk_id"]
-                    root_chunk.metadata["children_ids"].append(
-                        chunk.metadata["chunk_id"]
-                    )
+                    root_chunk.metadata["children_ids"].append(chunk.metadata["chunk_id"])
                 continue
 
             # Find parent by walking up path segments
@@ -423,7 +406,7 @@ class HierarchyBuilder:
                 chunk.metadata["parent_id"] = root_chunk.metadata["chunk_id"]
                 root_chunk.metadata["children_ids"].append(chunk.metadata["chunk_id"])
 
-    def _build_sibling_links(self, chunks: List[Chunk]) -> None:
+    def _build_sibling_links(self, chunks: list[Chunk]) -> None:
         """
         Build prev/next sibling links. Complexity: < 7.
 
@@ -431,7 +414,7 @@ class HierarchyBuilder:
             chunks: All chunks with parent_id assigned
         """
         # Group by parent_id
-        siblings_by_parent: Dict[str, List[Chunk]] = {}
+        siblings_by_parent: dict[str, list[Chunk]] = {}
         for chunk in chunks:
             parent_id = chunk.metadata.get("parent_id")
             if parent_id:
@@ -447,7 +430,7 @@ class HierarchyBuilder:
                     chunk.metadata["next_sibling_id"] = sibs[i + 1].metadata["chunk_id"]
 
     def _assign_hierarchy_levels(
-        self, chunks: List[Chunk], root_chunk: Optional[Chunk] = None
+        self, chunks: list[Chunk], root_chunk: Chunk | None = None
     ) -> None:
         """
         Assign hierarchy_level based on tree depth from root. Complexity: < 7.
@@ -497,7 +480,7 @@ class HierarchyBuilder:
                 if child_id not in visited:
                     queue.append((child_id, current_level + 1))
 
-    def _mark_leaves(self, chunks: List[Chunk]) -> None:
+    def _mark_leaves(self, chunks: list[Chunk]) -> None:
         """
         Mark leaf chunks using hybrid criteria. Complexity: < 5.
 
@@ -548,7 +531,10 @@ class HierarchyBuilder:
 
         # Remove all ATX-style headers (# to ######)
         content_without_headers = re.sub(
-            r"^#{1,6}\s+.*$", "", content, flags=re.MULTILINE  # Match any level header
+            r"^#{1,6}\s+.*$",
+            "",
+            content,
+            flags=re.MULTILINE,  # Match any level header
         )
 
         # Remove excess whitespace and measure remaining text
@@ -557,7 +543,7 @@ class HierarchyBuilder:
         # Threshold: 100 chars of non-header content
         return len(text_only) > 100
 
-    def _extract_document_title(self, chunks: List[Chunk]) -> str:
+    def _extract_document_title(self, chunks: list[Chunk]) -> str:
         """
         Extract document title for root chunk. Complexity: < 5.
 
@@ -616,7 +602,7 @@ class HierarchyBuilder:
 
         return False
 
-    def _extract_document_summary(self, chunks: List[Chunk]) -> str:
+    def _extract_document_summary(self, chunks: list[Chunk]) -> str:
         """
         Extract document summary for root chunk. Complexity: < 8.
 
@@ -634,9 +620,7 @@ class HierarchyBuilder:
             Summary text
         """
         # Check preamble
-        preamble = next(
-            (c for c in chunks if c.metadata.get("content_type") == "preamble"), None
-        )
+        preamble = next((c for c in chunks if c.metadata.get("content_type") == "preamble"), None)
         if preamble:
             content = preamble.content
             # Skip if it's just URLs
@@ -648,9 +632,7 @@ class HierarchyBuilder:
                 return first_para
 
         # Fallback to first H1 section's first paragraph
-        first_h1 = next(
-            (c for c in chunks if c.metadata.get("header_level") == 1), None
-        )
+        first_h1 = next((c for c in chunks if c.metadata.get("header_level") == 1), None)
         if first_h1:
             content = first_h1.content
             if content:
@@ -668,7 +650,7 @@ class HierarchyBuilder:
         # Empty content as last resort
         return ""
 
-    def _validate_parent_child_counts(self, chunks: List[Chunk]) -> None:
+    def _validate_parent_child_counts(self, chunks: list[Chunk]) -> None:
         """
         Validate parent-child relationship counts. Complexity: < 6.
 
@@ -685,9 +667,7 @@ class HierarchyBuilder:
             declared_count = len(chunk.metadata.get("children_ids", []))
 
             # Count actual children
-            actual_children = [
-                c for c in chunks if c.metadata.get("parent_id") == chunk_id
-            ]
+            actual_children = [c for c in chunks if c.metadata.get("parent_id") == chunk_id]
 
             if declared_count != len(actual_children):
                 raise ValueError(
@@ -695,7 +675,7 @@ class HierarchyBuilder:
                     f"but has {len(actual_children)} actual children"
                 )
 
-    def _validate_sibling_chains(self, chunks: List[Chunk]) -> None:
+    def _validate_sibling_chains(self, chunks: list[Chunk]) -> None:
         """
         Validate sibling chain integrity. Complexity: < 9.
 
@@ -725,7 +705,7 @@ class HierarchyBuilder:
             error_msg = "Sibling chain validation failed:\n" + "\n".join(errors)
             raise ValueError(error_msg)
 
-    def _group_siblings_by_parent(self, chunks: List[Chunk]) -> Dict[str, List[Chunk]]:
+    def _group_siblings_by_parent(self, chunks: list[Chunk]) -> dict[str, list[Chunk]]:
         """
         Group chunks by their parent_id. Complexity: < 4.
 
@@ -735,7 +715,7 @@ class HierarchyBuilder:
         Returns:
             Dictionary mapping parent_id to list of children
         """
-        parent_groups: Dict[str, List[Chunk]] = {}
+        parent_groups: dict[str, list[Chunk]] = {}
         for chunk in chunks:
             parent_id = chunk.metadata.get("parent_id")
             if parent_id:
@@ -743,8 +723,8 @@ class HierarchyBuilder:
         return parent_groups
 
     def _validate_sibling_group(
-        self, parent_id: str, siblings: List[Chunk], chunk_map: Dict[str, Chunk]
-    ) -> List[str]:
+        self, parent_id: str, siblings: list[Chunk], chunk_map: dict[str, Chunk]
+    ) -> list[str]:
         """
         Validate single sibling group. Complexity: < 8.
 
@@ -759,34 +739,26 @@ class HierarchyBuilder:
         errors = []
 
         # Find first sibling
-        first_siblings = [
-            s for s in siblings if s.metadata.get("prev_sibling_id") is None
-        ]
+        first_siblings = [s for s in siblings if s.metadata.get("prev_sibling_id") is None]
         if len(first_siblings) != 1:
             errors.append(
-                f"Parent {parent_id}: Expected 1 first sibling, "
-                f"found {len(first_siblings)}"
+                f"Parent {parent_id}: Expected 1 first sibling, found {len(first_siblings)}"
             )
             return errors
 
         # Traverse and validate chain
-        chain_errors, chain_length = self._traverse_sibling_chain(
-            first_siblings[0], chunk_map
-        )
+        chain_errors, chain_length = self._traverse_sibling_chain(first_siblings[0], chunk_map)
         errors.extend(chain_errors)
 
         # Verify chain length
         if chain_length != len(siblings):
             errors.append(
-                f"Parent {parent_id}: Chain length {chain_length} != "
-                f"sibling count {len(siblings)}"
+                f"Parent {parent_id}: Chain length {chain_length} != sibling count {len(siblings)}"
             )
 
         return errors
 
-    def _traverse_sibling_chain(
-        self, start_chunk: Chunk, chunk_map: Dict[str, Chunk]
-    ) -> tuple:
+    def _traverse_sibling_chain(self, start_chunk: Chunk, chunk_map: dict[str, Chunk]) -> tuple:
         """
         Traverse sibling chain and validate links. Complexity: < 7.
 
@@ -808,8 +780,7 @@ class HierarchyBuilder:
 
             if not next_chunk:
                 errors.append(
-                    f"Chunk {current.metadata['chunk_id']}: "
-                    f"next_sibling {next_id} not found"
+                    f"Chunk {current.metadata['chunk_id']}: next_sibling {next_id} not found"
                 )
                 break
 

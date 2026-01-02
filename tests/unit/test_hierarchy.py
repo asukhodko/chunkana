@@ -51,7 +51,7 @@ class TestHierarchicalChunkingResult:
     def test_chunk_hierarchical_returns_result(self, chunker, hierarchical_markdown):
         """chunk_hierarchical should return HierarchicalChunkingResult."""
         result = chunker.chunk_hierarchical(hierarchical_markdown)
-        
+
         assert hasattr(result, "chunks")
         assert hasattr(result, "root_id")
         assert hasattr(result, "strategy_used")
@@ -60,7 +60,7 @@ class TestHierarchicalChunkingResult:
     def test_get_chunk_by_id(self, chunker, hierarchical_markdown):
         """get_chunk should return chunk by ID."""
         result = chunker.chunk_hierarchical(hierarchical_markdown)
-        
+
         # Get first chunk with ID
         for chunk in result.chunks:
             chunk_id = chunk.metadata.get("chunk_id")
@@ -73,14 +73,14 @@ class TestHierarchicalChunkingResult:
     def test_get_chunk_nonexistent_returns_none(self, chunker, hierarchical_markdown):
         """get_chunk with nonexistent ID should return None."""
         result = chunker.chunk_hierarchical(hierarchical_markdown)
-        
+
         found = result.get_chunk("nonexistent_id")
         assert found is None
 
     def test_get_children_returns_list(self, chunker, hierarchical_markdown):
         """get_children should return list of child chunks."""
         result = chunker.chunk_hierarchical(hierarchical_markdown)
-        
+
         # Find a chunk with children
         for chunk in result.chunks:
             chunk_id = chunk.metadata.get("chunk_id")
@@ -92,7 +92,7 @@ class TestHierarchicalChunkingResult:
     def test_get_parent_returns_chunk_or_none(self, chunker, hierarchical_markdown):
         """get_parent should return parent chunk or None."""
         result = chunker.chunk_hierarchical(hierarchical_markdown)
-        
+
         for chunk in result.chunks:
             chunk_id = chunk.metadata.get("chunk_id")
             if chunk_id:
@@ -103,7 +103,7 @@ class TestHierarchicalChunkingResult:
     def test_get_ancestors_returns_list(self, chunker, hierarchical_markdown):
         """get_ancestors should return list of ancestor chunks."""
         result = chunker.chunk_hierarchical(hierarchical_markdown)
-        
+
         for chunk in result.chunks:
             chunk_id = chunk.metadata.get("chunk_id")
             if chunk_id:
@@ -114,11 +114,11 @@ class TestHierarchicalChunkingResult:
     def test_get_flat_chunks_returns_leaves(self, chunker, hierarchical_markdown):
         """get_flat_chunks should return leaf chunks."""
         result = chunker.chunk_hierarchical(hierarchical_markdown)
-        
+
         flat = result.get_flat_chunks()
         assert isinstance(flat, list)
         assert len(flat) > 0
-        
+
         # All flat chunks should be leaves (is_leaf=True or no children)
         for chunk in flat:
             is_leaf = chunk.metadata.get("is_leaf", True)
@@ -127,7 +127,7 @@ class TestHierarchicalChunkingResult:
     def test_get_siblings_returns_list(self, chunker, hierarchical_markdown):
         """get_siblings should return sibling chunks."""
         result = chunker.chunk_hierarchical(hierarchical_markdown)
-        
+
         for chunk in result.chunks:
             chunk_id = chunk.metadata.get("chunk_id")
             if chunk_id:
@@ -141,11 +141,11 @@ class TestHierarchicalChunkingResult:
     def test_get_by_level_returns_chunks_at_level(self, chunker, hierarchical_markdown):
         """get_by_level should return chunks at specific hierarchy level."""
         result = chunker.chunk_hierarchical(hierarchical_markdown)
-        
+
         # Get chunks at level 0 (root level)
         level_0 = result.get_by_level(0)
         assert isinstance(level_0, list)
-        
+
         for chunk in level_0:
             assert chunk.metadata.get("hierarchy_level") == 0
 
@@ -156,12 +156,12 @@ class TestHierarchyConsistency:
     def test_parent_child_bidirectional(self, chunker, hierarchical_markdown):
         """Parent-child relationships should be bidirectional."""
         result = chunker.chunk_hierarchical(hierarchical_markdown)
-        
+
         for chunk in result.chunks:
             chunk_id = chunk.metadata.get("chunk_id")
             if not chunk_id:
                 continue
-            
+
             # If chunk has parent, parent's children should include chunk
             parent = result.get_parent(chunk_id)
             if parent:
@@ -173,14 +173,14 @@ class TestHierarchyConsistency:
     def test_ancestors_form_valid_path(self, chunker, hierarchical_markdown):
         """Ancestors should form valid path to root."""
         result = chunker.chunk_hierarchical(hierarchical_markdown)
-        
+
         for chunk in result.chunks:
             chunk_id = chunk.metadata.get("chunk_id")
             if not chunk_id:
                 continue
-            
+
             ancestors = result.get_ancestors(chunk_id)
-            
+
             # Verify chain: each ancestor's parent is the next ancestor
             current_id = chunk_id
             for ancestor in ancestors:
@@ -196,16 +196,16 @@ class TestToTreeDict:
     def test_to_tree_dict_returns_dict(self, chunker, hierarchical_markdown):
         """to_tree_dict should return dictionary."""
         result = chunker.chunk_hierarchical(hierarchical_markdown)
-        
+
         tree = result.to_tree_dict()
         assert isinstance(tree, dict)
 
     def test_tree_dict_has_required_fields(self, chunker, hierarchical_markdown):
         """Tree dict should have required fields."""
         result = chunker.chunk_hierarchical(hierarchical_markdown)
-        
+
         tree = result.to_tree_dict()
-        
+
         # Root node should have these fields
         if tree:  # May be empty if no root
             assert "id" in tree or tree == {}

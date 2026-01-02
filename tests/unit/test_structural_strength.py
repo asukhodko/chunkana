@@ -24,9 +24,9 @@ Brief but meaningful content.
         scope_chunks = [c for c in chunks if "## Scope" in c.content]
         if scope_chunks:
             chunk = scope_chunks[0]
-            assert not chunk.metadata.get(
-                "small_chunk", False
-            ), "Level 2 header chunk should not be flagged as small"
+            assert not chunk.metadata.get("small_chunk", False), (
+                "Level 2 header chunk should not be flagged as small"
+            )
 
     def test_level_3_header_prevents_small_flag(self):
         """Chunk with level 3 header should not be flagged as small."""
@@ -56,9 +56,9 @@ Third paragraph."""
         for chunk in chunks:
             paragraph_breaks = chunk.content.count("\n\n")
             if paragraph_breaks >= 2:
-                assert not chunk.metadata.get(
-                    "small_chunk", False
-                ), "Multi-paragraph chunk should not be flagged as small"
+                assert not chunk.metadata.get("small_chunk", False), (
+                    "Multi-paragraph chunk should not be flagged as small"
+                )
 
     def test_sufficient_text_lines_prevent_small_flag(self):
         """Chunk with 3+ non-header lines should not be flagged as small."""
@@ -91,9 +91,7 @@ This is a section with meaningful content that exceeds one hundred characters af
         for chunk in chunks:
             if "meaningful content" in chunk.content:
                 lines = [
-                    line
-                    for line in chunk.content.split("\n")
-                    if not line.strip().startswith("#")
+                    line for line in chunk.content.split("\n") if not line.strip().startswith("#")
                 ]
                 non_header = "\n".join(lines).strip()
                 if len(non_header) > 100:
@@ -185,9 +183,9 @@ Multiple paragraphs and substantial content make this structurally strong."""
 
         for chunk in chunks:
             if "## Scope" in chunk.content:
-                assert not chunk.metadata.get(
-                    "small_chunk", False
-                ), "Content-rich Scope section should not be flagged as small"
+                assert not chunk.metadata.get("small_chunk", False), (
+                    "Content-rich Scope section should not be flagged as small"
+                )
 
     def test_impact_section_not_flagged(self):
         """Content-rich Impact section should not be flagged as small."""

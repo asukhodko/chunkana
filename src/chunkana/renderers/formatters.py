@@ -15,12 +15,12 @@ if TYPE_CHECKING:
 def render_json(chunks: list["Chunk"]) -> list[dict]:
     """
     Convert chunks to list of dictionaries.
-    
+
     Does not modify chunks - returns new dict objects.
-    
+
     Args:
         chunks: List of Chunk objects
-    
+
     Returns:
         List of dictionaries with chunk data
     """
@@ -30,27 +30,25 @@ def render_json(chunks: list["Chunk"]) -> list[dict]:
 def render_inline_metadata(chunks: list["Chunk"]) -> list[str]:
     """
     Render chunks with inline JSON metadata tags.
-    
+
     Format:
         <metadata>
         {json metadata}
         </metadata>
-        
+
         {content}
-    
+
     Does not modify chunks.
-    
+
     Args:
         chunks: List of Chunk objects
-    
+
     Returns:
         List of formatted strings
     """
     result = []
     for chunk in chunks:
-        metadata_json = json.dumps(
-            chunk.metadata, ensure_ascii=False, indent=2, sort_keys=True
-        )
+        metadata_json = json.dumps(chunk.metadata, ensure_ascii=False, indent=2, sort_keys=True)
         result.append(f"<metadata>\n{metadata_json}\n</metadata>\n\n{chunk.content}")
     return result
 
@@ -58,21 +56,21 @@ def render_inline_metadata(chunks: list["Chunk"]) -> list[str]:
 def render_dify_style(chunks: list["Chunk"]) -> list[str]:
     """
     Render chunks in Dify-compatible format with <metadata> block.
-    
+
     Includes chunk.metadata + start_line + end_line in the metadata block.
     This matches v2 behavior with include_metadata=True.
-    
+
     Format:
         <metadata>
         {json with metadata + start_line + end_line}
         </metadata>
         {content}
-    
+
     Does not modify chunks.
-    
+
     Args:
         chunks: List of Chunk objects
-    
+
     Returns:
         List of formatted strings
     """
@@ -89,18 +87,18 @@ def render_dify_style(chunks: list["Chunk"]) -> list[str]:
 def render_with_embedded_overlap(chunks: list["Chunk"]) -> list[str]:
     """
     Render chunks with bidirectional overlap embedded into content string.
-    
+
     This is a VIEW operation - it does NOT modify chunk.content.
     Produces: previous_content + "\\n" + content + "\\n" + next_content
-    
+
     Use case: "rich context" mode. Whether this matches v2 include_metadata=False
     is determined by BASELINE.md and renderer golden outputs.
-    
+
     Does not modify chunks.
-    
+
     Args:
         chunks: List of Chunk objects
-    
+
     Returns:
         List of strings with embedded overlap
     """
@@ -121,18 +119,18 @@ def render_with_embedded_overlap(chunks: list["Chunk"]) -> list[str]:
 def render_with_prev_overlap(chunks: list["Chunk"]) -> list[str]:
     """
     Render chunks with only previous overlap embedded (sliding window).
-    
+
     This is a VIEW operation - it does NOT modify chunk.content.
     Produces: previous_content + "\\n" + content
-    
+
     Use case: "sliding window" mode. Whether this matches v2 include_metadata=False
     is determined by BASELINE.md and renderer golden outputs.
-    
+
     Does not modify chunks.
-    
+
     Args:
         chunks: List of Chunk objects
-    
+
     Returns:
         List of strings with previous overlap only
     """

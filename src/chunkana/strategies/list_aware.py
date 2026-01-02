@@ -6,7 +6,6 @@ Preserves list hierarchies and binds context paragraphs.
 """
 
 import re
-from typing import List, Optional, Tuple
 
 from ..config import ChunkConfig
 from ..types import Chunk, ContentAnalysis, ListBlock, ListItem, ListType
@@ -89,9 +88,7 @@ class ListAwareStrategy(BaseStrategy):
                 or analysis.list_count >= config.list_count_threshold
             )
 
-    def apply(
-        self, md_text: str, analysis: ContentAnalysis, config: ChunkConfig
-    ) -> List[Chunk]:
+    def apply(self, md_text: str, analysis: ContentAnalysis, config: ChunkConfig) -> list[Chunk]:
         """Apply list-aware chunking strategy."""
         if not md_text.strip():
             return []
@@ -108,20 +105,18 @@ class ListAwareStrategy(BaseStrategy):
             return self._split_text_to_size(md_text, 1, config)
 
         chunks = self._process_all_list_blocks(lines, list_blocks, headers, config)
-        chunks = self._process_remaining_text(
-            chunks, lines, list_blocks, headers, config
-        )
+        chunks = self._process_remaining_text(chunks, lines, list_blocks, headers, config)
         return chunks
 
     def _process_all_list_blocks(
         self,
-        lines: List[str],
-        list_blocks: List,
-        headers: List,
+        lines: list[str],
+        list_blocks: list,
+        headers: list,
         config: ChunkConfig,
-    ) -> List[Chunk]:
+    ) -> list[Chunk]:
         """Process all list blocks and text between them."""
-        chunks: List[Chunk] = []
+        chunks: list[Chunk] = []
         current_line = 1
         processed_blocks = set()  # Track processed blocks to prevent duplication
 
@@ -140,21 +135,19 @@ class ListAwareStrategy(BaseStrategy):
                     continue
 
             # Handle list block
-            chunks, current_line = self._process_list_block(
-                chunks, lines, block, config, headers
-            )
+            chunks, current_line = self._process_list_block(chunks, lines, block, config, headers)
             processed_blocks.add(id(block))
 
         return chunks
 
     def _process_remaining_text(
         self,
-        chunks: List[Chunk],
-        lines: List[str],
-        list_blocks: List,
-        headers: List,
+        chunks: list[Chunk],
+        lines: list[str],
+        list_blocks: list,
+        headers: list,
         config: ChunkConfig,
-    ) -> List[Chunk]:
+    ) -> list[Chunk]:
         """Process any remaining text after the last list block."""
         if not list_blocks:
             return chunks
@@ -176,13 +169,13 @@ class ListAwareStrategy(BaseStrategy):
 
     def _process_text_before_list(
         self,
-        chunks: List[Chunk],
-        lines: List[str],
+        chunks: list[Chunk],
+        lines: list[str],
         current_line: int,
         block: ListBlock,
         config: ChunkConfig,
-        headers: List,
-    ) -> Tuple[bool, List[Chunk], int]:
+        headers: list,
+    ) -> tuple[bool, list[Chunk], int]:
         """Process text before a list block.
 
         Returns:
@@ -226,12 +219,12 @@ class ListAwareStrategy(BaseStrategy):
 
     def _process_list_block(
         self,
-        chunks: List[Chunk],
-        lines: List[str],
+        chunks: list[Chunk],
+        lines: list[str],
         block: ListBlock,
         config: ChunkConfig,
-        headers: List,
-    ) -> Tuple[List[Chunk], int]:
+        headers: list,
+    ) -> tuple[list[Chunk], int]:
         """Process a list block."""
         list_content = self._reconstruct_list_block(block, lines)
 
@@ -257,7 +250,7 @@ class ListAwareStrategy(BaseStrategy):
 
     def _extract_introduction_context(
         self, text_before: str, list_block: ListBlock, config: ChunkConfig
-    ) -> Optional[str]:
+    ) -> str | None:
         """
         Extract introduction paragraph if present.
 
@@ -300,7 +293,7 @@ class ListAwareStrategy(BaseStrategy):
 
         return None
 
-    def _reconstruct_list_block(self, block: ListBlock, lines: List[str]) -> str:
+    def _reconstruct_list_block(self, block: ListBlock, lines: list[str]) -> str:
         """
         Reconstruct markdown list from ListBlock.
 
@@ -316,8 +309,8 @@ class ListAwareStrategy(BaseStrategy):
         return "\n".join(list_lines)
 
     def _split_list_preserving_hierarchy(
-        self, block: ListBlock, lines: List[str], config: ChunkConfig
-    ) -> List[Chunk]:
+        self, block: ListBlock, lines: list[str], config: ChunkConfig
+    ) -> list[Chunk]:
         """
         Split large list block while preserving hierarchy.
 
@@ -334,8 +327,8 @@ class ListAwareStrategy(BaseStrategy):
         Returns:
             List of chunks
         """
-        chunks: List[Chunk] = []
-        current_items: List[ListItem] = []
+        chunks: list[Chunk] = []
+        current_items: list[ListItem] = []
         current_start_line = None
 
         for i, item in enumerate(block.items):
@@ -364,9 +357,7 @@ class ListAwareStrategy(BaseStrategy):
                         block,
                         has_context_binding=False,
                     )
-                    self._set_oversize_metadata(
-                        chunk, "list_hierarchy_integrity", config
-                    )
+                    self._set_oversize_metadata(chunk, "list_hierarchy_integrity", config)
                     chunks.append(chunk)
 
                 # Start new group
@@ -380,9 +371,7 @@ class ListAwareStrategy(BaseStrategy):
 
         # Handle last group
         if current_items:
-            group_text, actual_end_line = self._reconstruct_item_group(
-                current_items, lines, block
-            )
+            group_text, actual_end_line = self._reconstruct_item_group(current_items, lines, block)
 
             if len(group_text) <= config.max_chunk_size:
                 chunk = self._create_list_chunk(
@@ -407,8 +396,8 @@ class ListAwareStrategy(BaseStrategy):
         return chunks
 
     def _reconstruct_item_group(
-        self, items: List[ListItem], lines: List[str], block: ListBlock
-    ) -> Tuple[str, int]:
+        self, items: list[ListItem], lines: list[str], block: ListBlock
+    ) -> tuple[str, int]:
         """
         Reconstruct markdown for a group of list items.
 
@@ -504,9 +493,7 @@ class ListAwareStrategy(BaseStrategy):
             header_path="",  # Will be filled by _add_header_path_to_chunk
         )
 
-    def _add_header_path_to_chunk(
-        self, chunk: Chunk, headers: List, start_line: int
-    ) -> None:
+    def _add_header_path_to_chunk(self, chunk: Chunk, headers: list, start_line: int) -> None:
         """Add header_path metadata to a chunk.
 
         Builds header hierarchy path similar to structural strategy.
@@ -518,7 +505,7 @@ class ListAwareStrategy(BaseStrategy):
             start_line: Starting line of the chunk
         """
         # Build header stack from headers BEFORE chunk start
-        header_stack: List = []
+        header_stack: list = []
 
         for header in headers:
             # Only consider headers BEFORE chunk start

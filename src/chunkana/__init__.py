@@ -6,14 +6,14 @@ preserving code blocks, tables, lists, and LaTeX formulas.
 
 Basic usage:
     from chunkana import chunk_markdown
-    
+
     chunks = chunk_markdown("# Hello\\n\\nWorld")
     for chunk in chunks:
         print(chunk.content)
 
 Advanced usage:
     from chunkana import MarkdownChunker, ChunkerConfig
-    
+
     config = ChunkerConfig(max_chunk_size=4096, overlap_size=200)
     chunker = MarkdownChunker(config)
     chunks = chunker.chunk(text)

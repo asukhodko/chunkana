@@ -3,7 +3,7 @@ Base strategy class for markdown_chunker v2.
 """
 
 from abc import ABC, abstractmethod
-from typing import TYPE_CHECKING, List, Tuple
+from typing import TYPE_CHECKING
 
 from ..config import ChunkConfig
 from ..types import Chunk, ContentAnalysis, LatexType
@@ -50,9 +50,7 @@ class BaseStrategy(ABC):
         pass
 
     @abstractmethod
-    def apply(
-        self, md_text: str, analysis: ContentAnalysis, config: ChunkConfig
-    ) -> List[Chunk]:
+    def apply(self, md_text: str, analysis: ContentAnalysis, config: ChunkConfig) -> list[Chunk]:
         """
         Apply strategy to produce chunks.
 
@@ -66,9 +64,7 @@ class BaseStrategy(ABC):
         """
         pass
 
-    def _create_chunk(
-        self, content: str, start_line: int, end_line: int, **metadata
-    ) -> Chunk:
+    def _create_chunk(self, content: str, start_line: int, end_line: int, **metadata) -> Chunk:
         """
         Create a chunk with strategy metadata.
 
@@ -89,9 +85,7 @@ class BaseStrategy(ABC):
             metadata=meta,
         )
 
-    def _set_oversize_metadata(
-        self, chunk: Chunk, reason: str, config: ChunkConfig
-    ) -> None:
+    def _set_oversize_metadata(self, chunk: Chunk, reason: str, config: ChunkConfig) -> None:
         """
         Set metadata for oversize chunks.
 
@@ -113,15 +107,13 @@ class BaseStrategy(ABC):
         }
 
         if reason not in VALID_REASONS:
-            raise ValueError(
-                f"Invalid oversize_reason: {reason}. Must be one of {VALID_REASONS}"
-            )
+            raise ValueError(f"Invalid oversize_reason: {reason}. Must be one of {VALID_REASONS}")
 
         if chunk.size > config.max_chunk_size:
             chunk.metadata["allow_oversize"] = True
             chunk.metadata["oversize_reason"] = reason
 
-    def _ensure_fence_balance(self, chunks: List[Chunk]) -> List[Chunk]:
+    def _ensure_fence_balance(self, chunks: list[Chunk]) -> list[Chunk]:
         """
         Ensure all chunks have balanced code fences.
 
@@ -173,7 +165,7 @@ class BaseStrategy(ABC):
 
     def _get_atomic_blocks_in_range(
         self, start_line: int, end_line: int, analysis: ContentAnalysis
-    ) -> List[Tuple[int, int, str]]:
+    ) -> list[tuple[int, int, str]]:
         """
         Get atomic blocks (code, table, LaTeX) within a line range.
 
@@ -188,21 +180,17 @@ class BaseStrategy(ABC):
         Returns:
             List of (block_start, block_end, block_type) tuples
         """
-        atomic_ranges: List[Tuple[int, int, str]] = []
+        atomic_ranges: list[tuple[int, int, str]] = []
 
         # Add code blocks in range
         for code_block in analysis.code_blocks:
             if start_line <= code_block.start_line <= end_line:
-                atomic_ranges.append(
-                    (code_block.start_line, code_block.end_line, "code")
-                )
+                atomic_ranges.append((code_block.start_line, code_block.end_line, "code"))
 
         # Add table blocks in range
         for table_block in analysis.tables:
             if start_line <= table_block.start_line <= end_line:
-                atomic_ranges.append(
-                    (table_block.start_line, table_block.end_line, "table")
-                )
+                atomic_ranges.append((table_block.start_line, table_block.end_line, "table"))
 
         # Add LaTeX blocks in range (only if configured)
         for latex_block in analysis.latex_blocks:
@@ -212,18 +200,14 @@ class BaseStrategy(ABC):
                     LatexType.DISPLAY,
                     LatexType.ENVIRONMENT,
                 ):
-                    atomic_ranges.append(
-                        (latex_block.start_line, latex_block.end_line, "latex")
-                    )
+                    atomic_ranges.append((latex_block.start_line, latex_block.end_line, "latex"))
 
         # Sort by start line
         atomic_ranges.sort(key=lambda x: x[0])
 
         return atomic_ranges
 
-    def _split_text_to_size(
-        self, text: str, start_line: int, config: ChunkConfig
-    ) -> List[Chunk]:
+    def _split_text_to_size(self, text: str, start_line: int, config: ChunkConfig) -> list[Chunk]:
         """
         Split text into chunks respecting size limits.
 
@@ -289,9 +273,9 @@ class BaseStrategy(ABC):
     def _get_table_groups(
         self,
         analysis: ContentAnalysis,
-        lines: List[str],
+        lines: list[str],
         config: ChunkConfig,
-    ) -> List["TableGroup"]:
+    ) -> list["TableGroup"]:
         """
         Get table groups based on configuration.
 
@@ -334,9 +318,9 @@ class BaseStrategy(ABC):
 
     def _process_table_groups(
         self,
-        table_groups: List["TableGroup"],
+        table_groups: list["TableGroup"],
         config: ChunkConfig,
-    ) -> List[Chunk]:
+    ) -> list[Chunk]:
         """
         Create chunks from table groups.
 

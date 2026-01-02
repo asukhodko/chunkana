@@ -31,7 +31,7 @@ class StrategySelector:
     """
 
     def __init__(self):
-        self.strategies: List[BaseStrategy] = [
+        self.strategies: list[BaseStrategy] = [
             CodeAwareStrategy(),
             ListAwareStrategy(),
             StructuralStrategy(),

@@ -7,7 +7,6 @@ Validates chunking results against domain properties PROP-1 through PROP-5.
 """
 
 from dataclasses import dataclass
-from typing import List, Optional
 
 from .config import ChunkConfig
 from .types import Chunk
@@ -18,17 +17,15 @@ class ValidationResult:
     """Result of validation."""
 
     is_valid: bool
-    errors: List[str]
-    warnings: List[str]
+    errors: list[str]
+    warnings: list[str]
 
     @classmethod
     def success(cls) -> "ValidationResult":
         return cls(is_valid=True, errors=[], warnings=[])
 
     @classmethod
-    def failure(
-        cls, errors: List[str], warnings: List[str] = None
-    ) -> "ValidationResult":
+    def failure(cls, errors: list[str], warnings: list[str] = None) -> "ValidationResult":
         return cls(is_valid=False, errors=errors, warnings=warnings or [])
 
 
@@ -44,11 +41,11 @@ class Validator:
     - PROP-5: Valid Line Numbers
     """
 
-    def __init__(self, config: Optional[ChunkConfig] = None):
+    def __init__(self, config: ChunkConfig | None = None):
         self.config = config or ChunkConfig()
 
     def validate(
-        self, chunks: List[Chunk], original_text: str, strict: bool = False
+        self, chunks: list[Chunk], original_text: str, strict: bool = False
     ) -> ValidationResult:
         """
         Validate chunks against all domain properties.
@@ -93,9 +90,7 @@ class Validator:
             return ValidationResult.failure(errors, warnings)
         return ValidationResult(is_valid=True, errors=[], warnings=warnings)
 
-    def _check_no_content_loss(
-        self, chunks: List[Chunk], original_text: str
-    ) -> Optional[str]:
+    def _check_no_content_loss(self, chunks: list[Chunk], original_text: str) -> str | None:
         """
         PROP-1: No Content Loss
 
@@ -117,7 +112,7 @@ class Validator:
 
         return None
 
-    def _check_size_bounds(self, chunks: List[Chunk]) -> List[str]:
+    def _check_size_bounds(self, chunks: list[Chunk]) -> list[str]:
         """
         PROP-2: Size Bounds
 
@@ -142,13 +137,11 @@ class Validator:
                         "section_integrity",
                     }
                     if reason not in valid_reasons:
-                        errors.append(
-                            f"PROP-2: Chunk {i} has invalid oversize_reason: {reason}"
-                        )
+                        errors.append(f"PROP-2: Chunk {i} has invalid oversize_reason: {reason}")
 
         return errors
 
-    def _check_monotonic_ordering(self, chunks: List[Chunk]) -> Optional[str]:
+    def _check_monotonic_ordering(self, chunks: list[Chunk]) -> str | None:
         """
         PROP-3: Monotonic Ordering
 
@@ -163,7 +156,7 @@ class Validator:
 
         return None
 
-    def _check_no_empty_chunks(self, chunks: List[Chunk]) -> List[str]:
+    def _check_no_empty_chunks(self, chunks: list[Chunk]) -> list[str]:
         """
         PROP-4: No Empty Chunks
 
@@ -177,9 +170,7 @@ class Validator:
 
         return errors
 
-    def _check_valid_line_numbers(
-        self, chunks: List[Chunk], original_text: str
-    ) -> List[str]:
+    def _check_valid_line_numbers(self, chunks: list[Chunk], original_text: str) -> list[str]:
         """
         PROP-5: Valid Line Numbers
 
@@ -190,9 +181,7 @@ class Validator:
 
         for i, chunk in enumerate(chunks):
             if chunk.start_line < 1:
-                errors.append(
-                    f"PROP-5: Chunk {i} has invalid start_line: {chunk.start_line}"
-                )
+                errors.append(f"PROP-5: Chunk {i} has invalid start_line: {chunk.start_line}")
 
             if chunk.end_line < chunk.start_line:
                 errors.append(
@@ -210,9 +199,9 @@ class Validator:
 
 
 def validate_chunks(
-    chunks: List[Chunk],
+    chunks: list[Chunk],
     original_text: str,
-    config: Optional[ChunkConfig] = None,
+    config: ChunkConfig | None = None,
     strict: bool = False,
 ) -> ValidationResult:
     """

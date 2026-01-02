@@ -5,7 +5,7 @@ Handles file reading and buffer window management.
 """
 
 import io
-from typing import Iterator, List, Tuple
+from collections.abc import Iterator
 
 from .config import StreamingConfig
 
@@ -26,18 +26,16 @@ class BufferManager:
         """
         self.config = config
 
-    def read_windows(
-        self, stream: io.TextIOBase
-    ) -> Iterator[Tuple[List[str], List[str], int]]:
+    def read_windows(self, stream: io.TextIOBase) -> Iterator[tuple[list[str], list[str], int]]:
         """
         Read buffer windows from stream.
 
         Yields:
             Tuple of (buffer_lines, overlap_lines, bytes_processed)
         """
-        buffer: List[str] = []
+        buffer: list[str] = []
         buffer_size = 0
-        overlap_buffer: List[str] = []
+        overlap_buffer: list[str] = []
         bytes_processed = 0
 
         for line in stream:
@@ -55,7 +53,7 @@ class BufferManager:
         if buffer:
             yield (buffer, overlap_buffer, bytes_processed)
 
-    def _extract_overlap(self, buffer: List[str]) -> List[str]:
+    def _extract_overlap(self, buffer: list[str]) -> list[str]:
         """Extract overlap lines from buffer end."""
         n = self.config.overlap_lines
         if len(buffer) <= n:

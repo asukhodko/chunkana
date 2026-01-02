@@ -5,7 +5,6 @@ Tracks code fence state across buffer windows to prevent mid-block splits.
 """
 
 import re
-from typing import Optional, Tuple
 
 
 class FenceTracker:
@@ -17,7 +16,7 @@ class FenceTracker:
 
     def __init__(self):
         """Initialize fence tracker."""
-        self._fence_stack: list[Tuple[str, int]] = []
+        self._fence_stack: list[tuple[str, int]] = []
         self._fence_pattern = re.compile(r"^(\s*)(`{3,}|~{3,})(\w*)\s*$")
 
     def track_line(self, line: str) -> None:
@@ -41,7 +40,7 @@ class FenceTracker:
         """Check if currently inside fence."""
         return len(self._fence_stack) > 0
 
-    def get_fence_info(self) -> Optional[Tuple[str, int]]:
+    def get_fence_info(self) -> tuple[str, int] | None:
         """Get current fence details if inside fence."""
         if self._fence_stack:
             return self._fence_stack[-1]
@@ -51,7 +50,7 @@ class FenceTracker:
         """Clear fence state."""
         self._fence_stack.clear()
 
-    def _is_opening(self, line: str) -> Optional[Tuple[str, int]]:
+    def _is_opening(self, line: str) -> tuple[str, int] | None:
         """Detect fence opening."""
         match = self._fence_pattern.match(line)
         if match:

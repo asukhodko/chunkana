@@ -39,7 +39,7 @@ class MyClass:
         analysis = parser.analyze(md_text)
         selector = StrategySelector()
         config = ChunkConfig()
-        
+
         strategy = selector.select(analysis, config)
         assert strategy.name == "code_aware"
 
@@ -58,7 +58,7 @@ Some text after table.
         analysis = parser.analyze(md_text)
         selector = StrategySelector()
         config = ChunkConfig()
-        
+
         strategy = selector.select(analysis, config)
         assert strategy.name == "code_aware"
 
@@ -86,7 +86,7 @@ Content 4.
         analysis = parser.analyze(md_text)
         selector = StrategySelector()
         config = ChunkConfig()
-        
+
         strategy = selector.select(analysis, config)
         assert strategy.name == "structural"
 
@@ -119,7 +119,7 @@ Final text.
         analysis = parser.analyze(md_text)
         selector = StrategySelector()
         config = ChunkConfig()
-        
+
         strategy = selector.select(analysis, config)
         assert strategy.name == "list_aware"
 
@@ -133,7 +133,7 @@ Just paragraphs of text that need to be chunked somehow.
         analysis = parser.analyze(md_text)
         selector = StrategySelector()
         config = ChunkConfig()
-        
+
         strategy = selector.select(analysis, config)
         assert strategy.name == "fallback"
 
@@ -146,7 +146,7 @@ Some content.
         parser = Parser()
         analysis = parser.analyze(md_text)
         selector = StrategySelector()
-        
+
         # Force fallback even though document has headers
         config = ChunkConfig(strategy_override="fallback")
         strategy = selector.select(analysis, config)
@@ -158,7 +158,7 @@ Some content.
         parser = Parser()
         analysis = parser.analyze(md_text)
         selector = StrategySelector()
-        
+
         config = ChunkConfig(strategy_override="code_aware")
         strategy = selector.select(analysis, config)
         assert strategy.name == "code_aware"
@@ -185,11 +185,11 @@ Text after code.
         config = ChunkConfig(max_chunk_size=500)
         chunker = MarkdownChunker(config)
         chunks = chunker.chunk(md_text)
-        
+
         # Find chunk with code
         code_chunks = [c for c in chunks if "def long_function" in c.content]
         assert len(code_chunks) == 1
-        
+
         # Code block should be complete
         code_chunk = code_chunks[0]
         assert "```python" in code_chunk.content
@@ -210,11 +210,11 @@ Text after table.
         config = ChunkConfig(max_chunk_size=500)
         chunker = MarkdownChunker(config)
         chunks = chunker.chunk(md_text)
-        
+
         # Find chunk with table
         table_chunks = [c for c in chunks if "| Col1 |" in c.content]
         assert len(table_chunks) == 1
-        
+
         # Table should be complete
         table_chunk = table_chunks[0]
         assert "| G    | H    | I    |" in table_chunk.content
@@ -240,10 +240,10 @@ Content for section 3.
         config = ChunkConfig(max_chunk_size=100, overlap_size=20)
         chunker = MarkdownChunker(config)
         chunks = chunker.chunk(md_text)
-        
+
         # Should have multiple chunks
         assert len(chunks) >= 2
-        
+
         # Each chunk should have header_path metadata
         for chunk in chunks:
             assert "header_path" in chunk.metadata
@@ -263,7 +263,7 @@ Content 2.
         config = ChunkConfig(max_chunk_size=1000)
         chunker = MarkdownChunker(config)
         chunks = chunker.chunk(md_text)
-        
+
         # Check header_path contains hierarchy
         paths = [c.metadata.get("header_path", "") for c in chunks]
         assert any("Main" in p for p in paths)
@@ -285,7 +285,7 @@ Conclusion.
         config = ChunkConfig(max_chunk_size=500)
         chunker = MarkdownChunker(config)
         chunks = chunker.chunk(md_text)
-        
+
         # Check that list items are complete
         for chunk in chunks:
             content = chunk.content
@@ -300,14 +300,14 @@ class TestFallbackStrategy:
     def test_handles_plain_text(self):
         """Should handle plain text without structure."""
         md_text = "This is plain text. " * 50
-        
+
         config = ChunkConfig(max_chunk_size=200, overlap_size=50)
         chunker = MarkdownChunker(config)
         chunks = chunker.chunk(md_text)
-        
+
         # Should produce chunks
         assert len(chunks) >= 1
-        
+
         # All content should be preserved
         combined = "".join(c.content for c in chunks)
         assert "This is plain text" in combined
@@ -315,14 +315,14 @@ class TestFallbackStrategy:
     def test_respects_size_limits(self):
         """Should respect max_chunk_size or mark as oversize."""
         md_text = "Word " * 500
-        
+
         config = ChunkConfig(max_chunk_size=100, overlap_size=20)
         chunker = MarkdownChunker(config)
         chunks = chunker.chunk(md_text)
-        
+
         # Should produce chunks
         assert len(chunks) >= 1
-        
+
         # Chunks that exceed limit should have allow_oversize flag
         for chunk in chunks:
             if len(chunk.content) > config.max_chunk_size:
@@ -340,11 +340,14 @@ Content here.
 """
         chunker = MarkdownChunker()
         chunks = chunker.chunk(md_text)
-        
+
         for chunk in chunks:
             assert "strategy" in chunk.metadata
             assert chunk.metadata["strategy"] in [
-                "code_aware", "structural", "list_aware", "fallback"
+                "code_aware",
+                "structural",
+                "list_aware",
+                "fallback",
             ]
 
     def test_content_type_in_metadata(self):
@@ -357,6 +360,6 @@ Section content.
 """
         chunker = MarkdownChunker()
         chunks = chunker.chunk(md_text)
-        
+
         for chunk in chunks:
             assert "content_type" in chunk.metadata

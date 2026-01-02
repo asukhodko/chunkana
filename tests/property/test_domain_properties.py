@@ -41,7 +41,7 @@ def markdown_with_headers(draw):
 
     for i in range(num_sections):
         level = draw(st.integers(min_value=1, max_value=3))
-        header = "#" * level + f" Section {i+1}"
+        header = "#" * level + f" Section {i + 1}"
         content = draw(
             st.text(
                 alphabet=st.characters(whitelist_categories=("L", "N", "P", "Z")),
@@ -62,9 +62,7 @@ def markdown_with_code(draw):
 
     for i in range(num_blocks):
         text = draw(
-            st.text(min_size=10, max_size=100).filter(
-                lambda x: "```" not in x and x.strip()
-            )
+            st.text(min_size=10, max_size=100).filter(lambda x: "```" not in x and x.strip())
         )
         parts.append(text)
 
@@ -72,11 +70,7 @@ def markdown_with_code(draw):
         code = draw(st.text(min_size=5, max_size=150).filter(lambda x: "```" not in x))
         parts.append(f"```{lang}\n{code}\n```")
 
-    final = draw(
-        st.text(min_size=10, max_size=100).filter(
-            lambda x: "```" not in x and x.strip()
-        )
-    )
+    final = draw(st.text(min_size=10, max_size=100).filter(lambda x: "```" not in x and x.strip()))
     parts.append(final)
 
     return "\n\n".join(parts)
@@ -97,8 +91,7 @@ def markdown_with_tables(draw):
     data_rows = []
     for r in range(rows):
         cells = [
-            draw(st.text(min_size=1, max_size=10, alphabet="abcdefghijklmnop"))
-            for _ in range(cols)
+            draw(st.text(min_size=1, max_size=10, alphabet="abcdefghijklmnop")) for _ in range(cols)
         ]
         data_rows.append("| " + " | ".join(cells) + " |")
 
@@ -177,7 +170,7 @@ class TestProp3MonotonicOrdering:
         for i in range(len(chunks) - 1):
             assert chunks[i].start_line <= chunks[i + 1].start_line, (
                 f"Chunks out of order: chunk {i} starts at line {chunks[i].start_line}, "
-                f"chunk {i+1} starts at line {chunks[i+1].start_line}"
+                f"chunk {i + 1} starts at line {chunks[i + 1].start_line}"
             )
 
 
@@ -216,12 +209,10 @@ class TestProp5ValidLineNumbers:
         chunks = chunker.chunk(doc)
 
         for i, chunk in enumerate(chunks):
-            assert (
-                chunk.start_line >= 1
-            ), f"Chunk {i} has invalid start_line: {chunk.start_line}"
-            assert (
-                chunk.end_line >= chunk.start_line
-            ), f"Chunk {i} has end_line ({chunk.end_line}) < start_line ({chunk.start_line})"
+            assert chunk.start_line >= 1, f"Chunk {i} has invalid start_line: {chunk.start_line}"
+            assert chunk.end_line >= chunk.start_line, (
+                f"Chunk {i} has end_line ({chunk.end_line}) < start_line ({chunk.start_line})"
+            )
 
 
 # =============================================================================
@@ -244,9 +235,9 @@ class TestProp6CodeBlockIntegrity:
             has_error = chunk.metadata.get("fence_balance_error", False)
 
             # Either balanced fences or error flag
-            assert (
-                fence_count % 2 == 0 or has_error
-            ), f"Chunk {i} has unbalanced fences ({fence_count}) without error flag"
+            assert fence_count % 2 == 0 or has_error, (
+                f"Chunk {i} has unbalanced fences ({fence_count}) without error flag"
+            )
 
 
 # =============================================================================
@@ -289,9 +280,9 @@ class TestProp9Idempotence:
         chunks1 = chunker.chunk(doc)
         chunks2 = chunker.chunk(doc)
 
-        assert len(chunks1) == len(
-            chunks2
-        ), f"Different chunk counts: {len(chunks1)} vs {len(chunks2)}"
+        assert len(chunks1) == len(chunks2), (
+            f"Different chunk counts: {len(chunks1)} vs {len(chunks2)}"
+        )
 
         for i, (c1, c2) in enumerate(zip(chunks1, chunks2)):
             assert c1.content == c2.content, f"Chunk {i} content differs"
@@ -360,6 +351,7 @@ More text.
         combined = "".join(c.content for c in chunks)
 
         import re
+
         original_words = set(re.findall(r"\w+", text))
         combined_words = set(re.findall(r"\w+", combined))
 

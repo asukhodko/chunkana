@@ -6,7 +6,7 @@ All types in one file - no duplication between parser and chunker.
 
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 
 class ListType(Enum):
@@ -44,7 +44,7 @@ class ListItem:
     depth: int
     line_number: int
     list_type: ListType
-    is_checked: Optional[bool] = None
+    is_checked: bool | None = None
 
 
 @dataclass
@@ -60,7 +60,7 @@ class ListBlock:
         max_depth: Maximum nesting level in block
     """
 
-    items: List[ListItem]
+    items: list[ListItem]
     start_line: int
     end_line: int
     list_type: ListType
@@ -100,7 +100,7 @@ class FencedBlock:
             (optional, used by enhanced code-context binding feature)
     """
 
-    language: Optional[str]
+    language: str | None
     content: str
     start_line: int
     end_line: int
@@ -110,7 +110,7 @@ class FencedBlock:
     fence_length: int = 3
     is_closed: bool = True
     # Optional fields for code-context binding (backward compatible)
-    context_role: Optional[str] = None
+    context_role: str | None = None
     has_explanation_before: bool = False
     has_explanation_after: bool = False
 
@@ -175,7 +175,7 @@ class LatexBlock:
     end_line: int
     start_pos: int = 0
     end_pos: int = 0
-    environment_name: Optional[str] = None
+    environment_name: str | None = None
 
 
 @dataclass
@@ -202,11 +202,11 @@ class ContentAnalysis:
     list_item_count: int = 0
 
     # Extracted elements
-    code_blocks: List[FencedBlock] = field(default_factory=list)
-    headers: List[Header] = field(default_factory=list)
-    tables: List[TableBlock] = field(default_factory=list)
-    list_blocks: List[ListBlock] = field(default_factory=list)
-    latex_blocks: List["LatexBlock"] = field(default_factory=list)
+    code_blocks: list[FencedBlock] = field(default_factory=list)
+    headers: list[Header] = field(default_factory=list)
+    tables: list[TableBlock] = field(default_factory=list)
+    list_blocks: list[ListBlock] = field(default_factory=list)
+    latex_blocks: list["LatexBlock"] = field(default_factory=list)
 
     # Additional metrics
     has_preamble: bool = False
@@ -220,9 +220,9 @@ class ContentAnalysis:
 
     # O1: Line array optimization (optional, backward compatible)
     # Private field excluded from repr to avoid clutter in debug output
-    _lines: Optional[List[str]] = field(default=None, repr=False)
+    _lines: list[str] | None = field(default=None, repr=False)
 
-    def get_lines(self) -> Optional[List[str]]:
+    def get_lines(self) -> list[str] | None:
         """
         Get cached line array if available.
 
@@ -292,7 +292,7 @@ class Chunk:
     content: str
     start_line: int
     end_line: int
-    metadata: Dict[str, Any] = field(default_factory=dict)
+    metadata: dict[str, Any] = field(default_factory=dict)
 
     def __post_init__(self):
         """Validate chunk on creation."""
@@ -325,7 +325,7 @@ class Chunk:
         """Strategy that created this chunk."""
         return self.metadata.get("strategy", "unknown")
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary for serialization."""
         return {
             "content": self.content,
@@ -337,7 +337,7 @@ class Chunk:
         }
 
     @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> "Chunk":
+    def from_dict(cls, data: dict[str, Any]) -> "Chunk":
         """Create from dictionary."""
         if not isinstance(data, dict):
             raise ValueError(f"Expected dict, got {type(data).__name__}")
@@ -392,7 +392,7 @@ class ChunkingMetrics:
     @classmethod
     def from_chunks(
         cls,
-        chunks: List["Chunk"],
+        chunks: list["Chunk"],
         min_chunk_size: int = 512,
         max_chunk_size: int = 4096,
     ) -> "ChunkingMetrics":
@@ -415,7 +415,7 @@ class ChunkingMetrics:
             oversize_count=sum(1 for s in sizes if s > max_chunk_size),
         )
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary."""
         return {
             "total_chunks": self.total_chunks,
@@ -436,7 +436,7 @@ class ChunkingResult:
     Contains chunks and metadata about the chunking process.
     """
 
-    chunks: List[Chunk]
+    chunks: list[Chunk]
     strategy_used: str
     processing_time: float = 0.0
     total_chars: int = 0
@@ -452,7 +452,7 @@ class ChunkingResult:
         """Total size of all chunks."""
         return sum(c.size for c in self.chunks)
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary for serialization."""
         return {
             "chunks": [c.to_dict() for c in self.chunks],
@@ -464,7 +464,7 @@ class ChunkingResult:
         }
 
     @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> "ChunkingResult":
+    def from_dict(cls, data: dict[str, Any]) -> "ChunkingResult":
         """Create from dictionary."""
         chunks = [Chunk.from_dict(c) for c in data.get("chunks", [])]
         return cls(

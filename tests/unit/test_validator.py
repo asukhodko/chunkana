@@ -25,7 +25,7 @@ More content.
 """
         chunker = MarkdownChunker()
         chunks = chunker.chunk(md_text)
-        
+
         # Validator checks are strict - just verify no errors in chunking
         assert len(chunks) > 0
         for chunk in chunks:
@@ -36,21 +36,19 @@ More content.
         """Empty chunks list should be valid for empty input."""
         validator = Validator()
         result = validator.validate([], "")
-        
+
         assert result.is_valid
 
     def test_validate_detects_content_loss(self):
         """Should detect significant content loss."""
         md_text = "Hello world. This is a test."
-        
+
         # Create chunks that miss content
-        chunks = [
-            Chunk(content="Hello", start_line=1, end_line=1, metadata={})
-        ]
-        
+        chunks = [Chunk(content="Hello", start_line=1, end_line=1, metadata={})]
+
         validator = Validator()
         result = validator.validate(chunks, md_text)
-        
+
         # Should detect content loss (as warning by default)
         assert len(result.warnings) > 0 or not result.is_valid
 
@@ -66,10 +64,10 @@ Line 4
             Chunk(content="Line 3", start_line=3, end_line=3, metadata={}),
             Chunk(content="Line 1", start_line=1, end_line=1, metadata={}),
         ]
-        
+
         validator = Validator()
         result = validator.validate(chunks, md_text)
-        
+
         # Should detect ordering issue
         assert not result.is_valid
 
@@ -91,14 +89,14 @@ class TestValidationResult:
         """Result should be valid with only warnings."""
         result = ValidationResult(is_valid=True, errors=[], warnings=["Warning 1"])
         assert result.is_valid
-    
+
     def test_success_factory(self):
         """success() should create valid result."""
         result = ValidationResult.success()
         assert result.is_valid
         assert len(result.errors) == 0
         assert len(result.warnings) == 0
-    
+
     def test_failure_factory(self):
         """failure() should create invalid result."""
         result = ValidationResult.failure(["Error 1"])
@@ -117,7 +115,7 @@ Content here.
 """
         chunker = MarkdownChunker()
         chunks = chunker.chunk(md_text)
-        
+
         # Chunks should be valid
         for chunk in chunks:
             assert chunk.start_line >= 1
@@ -137,7 +135,7 @@ Content here.
         config = ChunkConfig(max_chunk_size=200, overlap_size=50)
         chunker = MarkdownChunker(config)
         chunks = chunker.chunk(md_text)
-        
+
         # Find oversize chunks
         for chunk in chunks:
             if len(chunk.content) > config.max_chunk_size:
@@ -160,7 +158,7 @@ Content 3.
 """
         chunker = MarkdownChunker()
         chunks = chunker.chunk(md_text)
-        
+
         # Check monotonic ordering
         for i in range(len(chunks) - 1):
             assert chunks[i].start_line <= chunks[i + 1].start_line
@@ -168,7 +166,7 @@ Content 3.
 
 class TestValidateChunksFunction:
     """Tests for validate_chunks convenience function."""
-    
+
     def test_validate_chunks_function(self):
         """validate_chunks should work as convenience function."""
         md_text = """# Header
@@ -177,38 +175,36 @@ Content.
 """
         chunker = MarkdownChunker()
         chunks = chunker.chunk(md_text)
-        
+
         # Just verify chunks are produced correctly
         assert len(chunks) > 0
         for chunk in chunks:
             assert chunk.content.strip()
-    
+
     def test_validate_chunks_with_config(self):
         """validate_chunks should accept config."""
         md_text = "Short text."
         chunker = MarkdownChunker()
         chunks = chunker.chunk(md_text)
-        
+
         # Just verify chunks are produced correctly
         assert len(chunks) > 0
         for chunk in chunks:
             assert chunk.content.strip()
-    
+
     def test_validate_chunks_strict_mode(self):
         """validate_chunks strict mode should treat warnings as errors."""
         md_text = "Hello world. This is a test."
-        
+
         # Create chunks that miss content (will generate warning)
-        chunks = [
-            Chunk(content="Hello", start_line=1, end_line=1, metadata={})
-        ]
-        
+        chunks = [Chunk(content="Hello", start_line=1, end_line=1, metadata={})]
+
         # Non-strict: warning only
         result_normal = validate_chunks(chunks, md_text, strict=False)
-        
+
         # Strict: warning becomes error
         result_strict = validate_chunks(chunks, md_text, strict=True)
-        
+
         # Strict mode should be more restrictive
         assert not result_strict.is_valid
 
@@ -221,7 +217,7 @@ class TestValidationEdgeCases:
         md_text = "Short text."
         chunker = MarkdownChunker()
         chunks = chunker.chunk(md_text)
-        
+
         assert len(chunks) == 1
         assert chunks[0].content.strip() == "Short text."
 
@@ -237,10 +233,10 @@ class TestValidationEdgeCases:
 """
         chunker = MarkdownChunker()
         chunks = chunker.chunk(md_text)
-        
+
         # Should produce valid chunks
         assert len(chunks) >= 1
-        
+
         # Content should be preserved
         combined = "".join(c.content for c in chunks)
         assert "Заголовок" in combined
@@ -258,10 +254,10 @@ class TestValidationEdgeCases:
 """
         chunker = MarkdownChunker()
         chunks = chunker.chunk(md_text)
-        
+
         # Should produce valid chunks
         assert len(chunks) >= 1
-        
+
         # Special chars should be preserved
         combined = "".join(c.content for c in chunks)
         assert "<tag>" in combined

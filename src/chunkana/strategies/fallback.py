@@ -5,7 +5,6 @@ Universal strategy that works for any document.
 Splits by paragraphs and groups to max_chunk_size.
 """
 
-from typing import List, Tuple
 
 from ..config import ChunkConfig
 from ..types import Chunk, ContentAnalysis
@@ -34,9 +33,7 @@ class FallbackStrategy(BaseStrategy):
         """Always returns True - fallback handles everything."""
         return True
 
-    def apply(
-        self, md_text: str, analysis: ContentAnalysis, config: ChunkConfig
-    ) -> List[Chunk]:
+    def apply(self, md_text: str, analysis: ContentAnalysis, config: ChunkConfig) -> list[Chunk]:
         """
         Apply fallback strategy.
 
@@ -61,9 +58,7 @@ class FallbackStrategy(BaseStrategy):
             # No atomic blocks - simple paragraph splitting
             return self._apply_simple_paragraph_split(md_text, config)
 
-    def _apply_simple_paragraph_split(
-        self, md_text: str, config: ChunkConfig
-    ) -> List[Chunk]:
+    def _apply_simple_paragraph_split(self, md_text: str, config: ChunkConfig) -> list[Chunk]:
         """Simple paragraph splitting without atomic blocks."""
         # Split by double newlines (paragraphs)
         paragraphs = md_text.split("\n\n")
@@ -123,9 +118,9 @@ class FallbackStrategy(BaseStrategy):
     def _apply_with_atomic_blocks(
         self,
         md_text: str,
-        atomic_ranges: List[Tuple[int, int, str]],
+        atomic_ranges: list[tuple[int, int, str]],
         config: ChunkConfig,
-    ) -> List[Chunk]:
+    ) -> list[Chunk]:
         """Apply fallback strategy preserving atomic blocks.
 
         Args:
@@ -147,9 +142,7 @@ class FallbackStrategy(BaseStrategy):
                 text_content = "\n".join(text_lines)
                 if text_content.strip():
                     # Split text by paragraphs
-                    text_chunks = self._apply_simple_paragraph_split(
-                        text_content, config
-                    )
+                    text_chunks = self._apply_simple_paragraph_split(text_content, config)
                     # Adjust line numbers
                     for chunk in text_chunks:
                         chunk.start_line += current_line - 1
@@ -172,11 +165,7 @@ class FallbackStrategy(BaseStrategy):
                     reason = (
                         "code_block_integrity"
                         if block_type == "code"
-                        else (
-                            "table_integrity"
-                            if block_type == "table"
-                            else "latex_integrity"
-                        )
+                        else ("table_integrity" if block_type == "table" else "latex_integrity")
                     )
                     self._set_oversize_metadata(chunk, reason, config)
                 chunks.append(chunk)

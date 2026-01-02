@@ -90,7 +90,7 @@ class ChunkConfig:
     list_count_threshold: int = 5
 
     # Override
-    strategy_override: Optional[str] = None
+    strategy_override: str | None = None
 
     # Code-context binding parameters
     enable_code_context_binding: bool = True
@@ -102,7 +102,7 @@ class ChunkConfig:
 
     # Adaptive sizing parameters
     use_adaptive_sizing: bool = False
-    adaptive_config: Optional[AdaptiveSizeConfig] = None
+    adaptive_config: AdaptiveSizeConfig | None = None
 
     # Hierarchical chunking parameters
     include_document_summary: bool = True
@@ -136,23 +136,17 @@ class ChunkConfig:
     def _validate_size_params(self):
         """Validate size-related parameters."""
         if self.max_chunk_size <= 0:
-            raise ValueError(
-                f"max_chunk_size must be positive, got {self.max_chunk_size}"
-            )
+            raise ValueError(f"max_chunk_size must be positive, got {self.max_chunk_size}")
 
         if self.min_chunk_size <= 0:
-            raise ValueError(
-                f"min_chunk_size must be positive, got {self.min_chunk_size}"
-            )
+            raise ValueError(f"min_chunk_size must be positive, got {self.min_chunk_size}")
 
         if self.min_chunk_size > self.max_chunk_size:
             # Auto-adjust instead of error
             self.min_chunk_size = self.max_chunk_size // 2
 
         if self.overlap_size < 0:
-            raise ValueError(
-                f"overlap_size must be non-negative, got {self.overlap_size}"
-            )
+            raise ValueError(f"overlap_size must be non-negative, got {self.overlap_size}")
 
         if self.overlap_size >= self.max_chunk_size:
             raise ValueError(
@@ -163,25 +157,18 @@ class ChunkConfig:
     def _validate_threshold_params(self):
         """Validate threshold parameters."""
         if not 0 <= self.code_threshold <= 1:
-            raise ValueError(
-                f"code_threshold must be between 0 and 1, got {self.code_threshold}"
-            )
+            raise ValueError(f"code_threshold must be between 0 and 1, got {self.code_threshold}")
 
         if self.structure_threshold < 1:
-            raise ValueError(
-                f"structure_threshold must be >= 1, got {self.structure_threshold}"
-            )
+            raise ValueError(f"structure_threshold must be >= 1, got {self.structure_threshold}")
 
         if not 0 <= self.list_ratio_threshold <= 1:
             raise ValueError(
-                f"list_ratio_threshold must be between 0 and 1, "
-                f"got {self.list_ratio_threshold}"
+                f"list_ratio_threshold must be between 0 and 1, got {self.list_ratio_threshold}"
             )
 
         if self.list_count_threshold < 1:
-            raise ValueError(
-                f"list_count_threshold must be >= 1, got {self.list_count_threshold}"
-            )
+            raise ValueError(f"list_count_threshold must be >= 1, got {self.list_count_threshold}")
 
     def _validate_strategy_override(self):
         """Validate strategy override parameter."""
@@ -203,14 +190,12 @@ class ChunkConfig:
 
         if self.max_context_chars_after < 0:
             raise ValueError(
-                f"max_context_chars_after must be non-negative, "
-                f"got {self.max_context_chars_after}"
+                f"max_context_chars_after must be non-negative, got {self.max_context_chars_after}"
             )
 
         if self.related_block_max_gap < 1:
             raise ValueError(
-                f"related_block_max_gap must be >= 1, "
-                f"got {self.related_block_max_gap}"
+                f"related_block_max_gap must be >= 1, got {self.related_block_max_gap}"
             )
 
     def _validate_adaptive_sizing_params(self):
@@ -223,8 +208,7 @@ class ChunkConfig:
         """Validate LaTeX formula handling parameters."""
         if self.latex_max_context_chars < 0:
             raise ValueError(
-                f"latex_max_context_chars must be non-negative, "
-                f"got {self.latex_max_context_chars}"
+                f"latex_max_context_chars must be non-negative, got {self.latex_max_context_chars}"
             )
 
     def _validate_table_grouping_params(self):

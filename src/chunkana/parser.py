@@ -1,5 +1,4 @@
 import re
-from typing import List, Optional, Tuple
 
 from .types import (
     ContentAnalysis,
@@ -30,9 +29,7 @@ class Parser:
     """
 
     # Regex patterns
-    CODE_BLOCK_PATTERN = re.compile(
-        r"^(`{3,})(\w*)\n(.*?)\n\1", re.MULTILINE | re.DOTALL
-    )
+    CODE_BLOCK_PATTERN = re.compile(r"^(`{3,})(\w*)\n(.*?)\n\1", re.MULTILINE | re.DOTALL)
 
     HEADER_PATTERN = re.compile(r"^(#{1,6})\s+(.+)$", re.MULTILINE)
 
@@ -78,9 +75,7 @@ class Parser:
         max_header_depth = max((h.level for h in headers), default=0)
 
         # Calculate list metrics
-        list_chars = sum(
-            len(item.content) for block in list_blocks for item in block.items
-        )
+        list_chars = sum(len(item.content) for block in list_blocks for item in block.items)
         list_ratio = list_chars / total_chars if total_chars > 0 else 0.0
         list_item_count = sum(block.item_count for block in list_blocks)
         max_list_depth = max((block.max_depth for block in list_blocks), default=0)
@@ -145,7 +140,7 @@ class Parser:
         # Normalize: First convert CRLF to LF, then convert remaining CR to LF
         return text.replace("\r\n", "\n").replace("\r", "\n")
 
-    def _build_position_index(self, lines: List[str]) -> List[int]:
+    def _build_position_index(self, lines: list[str]) -> list[int]:
         """
         Build cumulative position index for O(1) position lookups.
 
@@ -170,7 +165,7 @@ class Parser:
             positions.append(cumulative)
         return positions
 
-    def _is_fence_opening(self, line: str) -> Optional[Tuple[str, int, str]]:
+    def _is_fence_opening(self, line: str) -> tuple[str, int, str] | None:
         """
         Check if line is a fence opening.
 
@@ -230,9 +225,7 @@ class Parser:
         pattern = rf"^(\s*)({re.escape(fence_char)}{{{fence_length},}})\s*$"
         return bool(re.match(pattern, line))
 
-    def _extract_code_blocks(
-        self, lines: List[str], positions: List[int]
-    ) -> List[FencedBlock]:
+    def _extract_code_blocks(self, lines: list[str], positions: list[int]) -> list[FencedBlock]:
         """
         Extract fenced code blocks with nested fencing support.
 
@@ -310,7 +303,7 @@ class Parser:
         """
         return "$$" in line.strip()
 
-    def _is_environment_start(self, line: str) -> Optional[str]:
+    def _is_environment_start(self, line: str) -> str | None:
         """
         Check if line starts a LaTeX environment.
 
@@ -348,7 +341,7 @@ class Parser:
         end_line: int,
         start_pos: int,
         end_pos: int,
-        env_name: Optional[str] = None,
+        env_name: str | None = None,
     ) -> LatexBlock:
         """
         Create a LatexBlock instance.
@@ -376,8 +369,8 @@ class Parser:
         )
 
     def _extract_latex_blocks(
-        self, lines: List[str], positions: List[int], code_blocks: List[FencedBlock]
-    ) -> List[LatexBlock]:
+        self, lines: list[str], positions: list[int], code_blocks: list[FencedBlock]
+    ) -> list[LatexBlock]:
         """
         Extract LaTeX formula blocks from markdown.
 
@@ -519,7 +512,7 @@ class Parser:
 
         return blocks
 
-    def _extract_headers(self, lines: List[str], positions: List[int]) -> List[Header]:
+    def _extract_headers(self, lines: list[str], positions: list[int]) -> list[Header]:
         """
         Extract markdown headers.
 
@@ -544,9 +537,7 @@ class Parser:
             # Check for fence closing FIRST (if inside fence)
             if fence_stack:
                 current_fence_char, current_fence_length = fence_stack[-1]
-                if self._is_fence_closing(
-                    line, current_fence_char, current_fence_length
-                ):
+                if self._is_fence_closing(line, current_fence_char, current_fence_length):
                     fence_stack.pop()
                     continue
 
@@ -579,9 +570,7 @@ class Parser:
 
         return headers
 
-    def _extract_tables(
-        self, lines: List[str], positions: List[int]
-    ) -> List[TableBlock]:
+    def _extract_tables(self, lines: list[str], positions: list[int]) -> list[TableBlock]:
         """
         Extract markdown tables.
 
@@ -610,9 +599,7 @@ class Parser:
             # Check for fence closing FIRST (if inside fence)
             if fence_stack:
                 current_fence_char, current_fence_length = fence_stack[-1]
-                if self._is_fence_closing(
-                    line, current_fence_char, current_fence_length
-                ):
+                if self._is_fence_closing(line, current_fence_char, current_fence_length):
                     fence_stack.pop()
                     i += 1
                     continue
@@ -668,8 +655,8 @@ class Parser:
         return tables
 
     def _detect_preamble(
-        self, lines: List[str], positions: List[int], headers: List[Header]
-    ) -> Tuple[bool, int]:
+        self, lines: list[str], positions: list[int], headers: list[Header]
+    ) -> tuple[bool, int]:
         """
         Detect if document has preamble (content before first header).
 
@@ -694,7 +681,7 @@ class Parser:
 
         return False, 0
 
-    def _extract_lists(self, lines: List[str], positions: List[int]) -> List[ListBlock]:
+    def _extract_lists(self, lines: list[str], positions: list[int]) -> list[ListBlock]:
         """
         Extract list blocks from markdown.
 
@@ -726,9 +713,7 @@ class Parser:
             # Check for fence closing FIRST (if inside fence)
             if fence_stack:
                 current_fence_char, current_fence_length = fence_stack[-1]
-                if self._is_fence_closing(
-                    line, current_fence_char, current_fence_length
-                ):
+                if self._is_fence_closing(line, current_fence_char, current_fence_length):
                     fence_stack.pop()
                     i += 1
                     continue
@@ -758,7 +743,7 @@ class Parser:
 
         return blocks
 
-    def _try_parse_list_item(self, line: str, line_number: int) -> Optional[ListItem]:
+    def _try_parse_list_item(self, line: str, line_number: int) -> ListItem | None:
         """
         Try to parse a line as a list item.
 
@@ -811,9 +796,7 @@ class Parser:
 
         return None
 
-    def _collect_list_block(
-        self, lines: List[str], start_idx: int
-    ) -> Tuple[ListBlock, int]:
+    def _collect_list_block(self, lines: list[str], start_idx: int) -> tuple[ListBlock, int]:
         """Collect an entire list block starting from start_idx."""
         items = []
         max_depth = 0
@@ -826,9 +809,7 @@ class Parser:
 
             # Empty line - check if list continues
             if not line.strip():
-                should_continue, new_i = self._should_continue_list(
-                    lines, i, first_item_type
-                )
+                should_continue, new_i = self._should_continue_list(lines, i, first_item_type)
                 if should_continue:
                     i = new_i
                     continue
@@ -871,8 +852,8 @@ class Parser:
         return block, end_idx
 
     def _should_continue_list(
-        self, lines: List[str], current_idx: int, first_item_type: Optional[ListType]
-    ) -> Tuple[bool, int]:
+        self, lines: list[str], current_idx: int, first_item_type: ListType | None
+    ) -> tuple[bool, int]:
         """Check if list continues after empty line."""
         if current_idx + 1 >= len(lines):
             return False, current_idx
@@ -888,7 +869,7 @@ class Parser:
         # Continue past the empty line
         return True, current_idx + 1
 
-    def _determine_primary_type(self, items: List[ListItem]) -> ListType:
+    def _determine_primary_type(self, items: list[ListItem]) -> ListType:
         """Determine predominant list type from items."""
         type_counts: dict[ListType, int] = {}
         for item in items:
@@ -908,7 +889,7 @@ class Parser:
         lines = md_text.split("\n")
         return sum(len(lines[i]) + 1 for i in range(line - 1))
 
-    def _calculate_avg_sentence_length(self, lines: List[str]) -> float:
+    def _calculate_avg_sentence_length(self, lines: list[str]) -> float:
         """
         Calculate average sentence length in characters.
 

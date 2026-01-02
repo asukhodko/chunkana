@@ -5,7 +5,6 @@ For documents with code blocks or tables.
 Consolidates CodeStrategy + MixedStrategy + TableStrategy.
 """
 
-from typing import List, Optional, Set, Tuple
 
 from ..code_context import CodeBlockRole, CodeContext, CodeContextBinder
 from ..config import ChunkConfig
@@ -41,9 +40,7 @@ class CodeAwareStrategy(BaseStrategy):
             or analysis.code_ratio >= config.code_threshold
         )
 
-    def apply(
-        self, md_text: str, analysis: ContentAnalysis, config: ChunkConfig
-    ) -> List[Chunk]:
+    def apply(self, md_text: str, analysis: ContentAnalysis, config: ChunkConfig) -> list[Chunk]:
         """
         Apply code-aware strategy.
 
@@ -64,7 +61,7 @@ class CodeAwareStrategy(BaseStrategy):
 
     def _apply_without_context_binding(
         self, md_text: str, analysis: ContentAnalysis, config: ChunkConfig
-    ) -> List[Chunk]:
+    ) -> list[Chunk]:
         """
         Original apply logic without code-context binding.
 
@@ -87,11 +84,7 @@ class CodeAwareStrategy(BaseStrategy):
 
         for block_start, block_end, block_type in atomic_ranges:
             # Handle text before atomic block
-            chunks.extend(
-                self._process_text_before_block(
-                    lines, current_line, block_start, config
-                )
-            )
+            chunks.extend(self._process_text_before_block(lines, current_line, block_start, config))
 
             # Handle atomic block
             atomic_chunk = self._process_atomic_block(
@@ -112,11 +105,11 @@ class CodeAwareStrategy(BaseStrategy):
 
     def _process_text_before_block(
         self,
-        lines: List[str],
+        lines: list[str],
         current_line: int,
         block_start: int,
         config: ChunkConfig,
-    ) -> List[Chunk]:
+    ) -> list[Chunk]:
         """Process text content before an atomic block."""
         if current_line >= block_start:
             return []
@@ -129,8 +122,8 @@ class CodeAwareStrategy(BaseStrategy):
         return []
 
     def _process_text_after_blocks(
-        self, lines: List[str], current_line: int, config: ChunkConfig
-    ) -> List[Chunk]:
+        self, lines: list[str], current_line: int, config: ChunkConfig
+    ) -> list[Chunk]:
         """Process text content after all atomic blocks."""
         if current_line > len(lines):
             return []
@@ -144,12 +137,12 @@ class CodeAwareStrategy(BaseStrategy):
 
     def _process_atomic_block(
         self,
-        lines: List[str],
+        lines: list[str],
         block_start: int,
         block_end: int,
         block_type: str,
         config: ChunkConfig,
-    ) -> Optional[Chunk]:
+    ) -> Chunk | None:
         """Process a single atomic block (code, table, or LaTeX)."""
         block_lines = lines[block_start - 1 : block_end]
         block_content = "\n".join(block_lines)
@@ -183,7 +176,7 @@ class CodeAwareStrategy(BaseStrategy):
 
     def _apply_with_context_binding(
         self, md_text: str, analysis: ContentAnalysis, config: ChunkConfig
-    ) -> List[Chunk]:
+    ) -> list[Chunk]:
         """
         Enhanced apply logic with code-context binding.
 
@@ -210,9 +203,7 @@ class CodeAwareStrategy(BaseStrategy):
 
         # Group related contexts and create index mapping
         context_groups = self._group_related_contexts(code_contexts, config)
-        context_to_group = self._build_context_to_group_map(
-            code_contexts, context_groups
-        )
+        context_to_group = self._build_context_to_group_map(code_contexts, context_groups)
 
         # Get atomic block ranges
         atomic_ranges = self._get_atomic_ranges(analysis)
@@ -232,8 +223,8 @@ class CodeAwareStrategy(BaseStrategy):
 
     def _build_context_to_group_map(
         self,
-        code_contexts: List[CodeContext],
-        context_groups: List[List[CodeContext]],
+        code_contexts: list[CodeContext],
+        context_groups: list[list[CodeContext]],
     ) -> dict:
         """Build mapping from context index to group."""
         context_to_group = {}
@@ -245,27 +236,23 @@ class CodeAwareStrategy(BaseStrategy):
 
     def _process_atomic_blocks_with_context(
         self,
-        lines: List[str],
+        lines: list[str],
         md_text: str,
         analysis: ContentAnalysis,
-        atomic_ranges: List[Tuple[int, int, str]],
-        code_contexts: List[CodeContext],
+        atomic_ranges: list[tuple[int, int, str]],
+        code_contexts: list[CodeContext],
         context_to_group: dict,
         config: ChunkConfig,
-    ) -> List[Chunk]:
+    ) -> list[Chunk]:
         """Process atomic blocks and create chunks with context binding."""
         chunks = []
         current_line = 1
-        processed_blocks: Set[int] = set()
-        processed_table_lines: Set[int] = set()
+        processed_blocks: set[int] = set()
+        processed_table_lines: set[int] = set()
 
         for block_start, block_end, block_type in atomic_ranges:
             # Handle text before atomic block
-            chunks.extend(
-                self._create_text_chunks_before(
-                    lines, current_line, block_start, config
-                )
-            )
+            chunks.extend(self._create_text_chunks_before(lines, current_line, block_start, config))
 
             # Handle atomic block
             if block_type == "code":
@@ -308,11 +295,11 @@ class CodeAwareStrategy(BaseStrategy):
 
     def _create_text_chunks_before(
         self,
-        lines: List[str],
+        lines: list[str],
         current_line: int,
         block_start: int,
         config: ChunkConfig,
-    ) -> List[Chunk]:
+    ) -> list[Chunk]:
         """Create chunks from text before atomic block."""
         if current_line >= block_start:
             return []
@@ -325,8 +312,8 @@ class CodeAwareStrategy(BaseStrategy):
         return []
 
     def _create_text_chunks_after(
-        self, lines: List[str], current_line: int, config: ChunkConfig
-    ) -> List[Chunk]:
+        self, lines: list[str], current_line: int, config: ChunkConfig
+    ) -> list[Chunk]:
         """Create chunks from text after last atomic block."""
         if current_line > len(lines):
             return []
@@ -340,20 +327,18 @@ class CodeAwareStrategy(BaseStrategy):
 
     def _process_code_block_with_context(
         self,
-        lines: List[str],
+        lines: list[str],
         md_text: str,
         analysis: ContentAnalysis,
         block_start: int,
         block_end: int,
-        code_contexts: List[CodeContext],
+        code_contexts: list[CodeContext],
         context_to_group: dict,
-        processed_blocks: Set[int],
+        processed_blocks: set[int],
         config: ChunkConfig,
-    ) -> Tuple[List[Chunk], int]:
+    ) -> tuple[list[Chunk], int]:
         """Process code block with context binding."""
-        code_block_idx = self._find_code_block_index(
-            analysis.code_blocks, block_start, block_end
-        )
+        code_block_idx = self._find_code_block_index(analysis.code_blocks, block_start, block_end)
 
         if code_block_idx is None or code_block_idx in processed_blocks:
             return [], block_end + 1
@@ -362,9 +347,7 @@ class CodeAwareStrategy(BaseStrategy):
 
         if group and len(group) > 1:
             # Create grouped chunk
-            chunk = self._create_grouped_code_chunk(
-                group, code_contexts, lines, md_text, config
-            )
+            chunk = self._create_grouped_code_chunk(group, code_contexts, lines, md_text, config)
             # Mark all blocks in group as processed
             for ctx in group:
                 idx = code_contexts.index(ctx)
@@ -380,13 +363,13 @@ class CodeAwareStrategy(BaseStrategy):
 
     def _process_table_block(
         self,
-        lines: List[str],
+        lines: list[str],
         block_start: int,
         block_end: int,
         config: ChunkConfig,
-        analysis: Optional[ContentAnalysis] = None,
-        processed_table_lines: Optional[Set[int]] = None,
-    ) -> Tuple[List[Chunk], int]:
+        analysis: ContentAnalysis | None = None,
+        processed_table_lines: set[int] | None = None,
+    ) -> tuple[list[Chunk], int]:
         """
         Process table block, with optional table grouping support.
 
@@ -433,13 +416,13 @@ class CodeAwareStrategy(BaseStrategy):
 
     def _process_table_with_grouping(
         self,
-        lines: List[str],
+        lines: list[str],
         block_start: int,
         block_end: int,
         config: ChunkConfig,
         analysis: ContentAnalysis,
-        processed_table_lines: Optional[Set[int]],
-    ) -> Tuple[List[Chunk], int]:
+        processed_table_lines: set[int] | None,
+    ) -> tuple[list[Chunk], int]:
         """
         Process table with grouping enabled.
 
@@ -496,9 +479,7 @@ class CodeAwareStrategy(BaseStrategy):
 
         return [chunk], block_end + 1
 
-    def _get_atomic_ranges(
-        self, analysis: ContentAnalysis
-    ) -> List[Tuple[int, int, str]]:
+    def _get_atomic_ranges(self, analysis: ContentAnalysis) -> list[tuple[int, int, str]]:
         """
         Get line ranges of atomic blocks.
 
@@ -526,8 +507,8 @@ class CodeAwareStrategy(BaseStrategy):
         return ranges
 
     def _group_related_contexts(
-        self, contexts: List[CodeContext], config: ChunkConfig
-    ) -> List[List[CodeContext]]:
+        self, contexts: list[CodeContext], config: ChunkConfig
+    ) -> list[list[CodeContext]]:
         """
         Group related code contexts based on relationships.
 
@@ -583,9 +564,7 @@ class CodeAwareStrategy(BaseStrategy):
         """
         # Check Before/After pairing
         if config.preserve_before_after_pairs:
-            if (
-                ctx1.role == CodeBlockRole.BEFORE and ctx2.role == CodeBlockRole.AFTER
-            ) or (
+            if (ctx1.role == CodeBlockRole.BEFORE and ctx2.role == CodeBlockRole.AFTER) or (
                 ctx1.role == CodeBlockRole.AFTER and ctx2.role == CodeBlockRole.BEFORE
             ):
                 # Check proximity
@@ -609,8 +588,8 @@ class CodeAwareStrategy(BaseStrategy):
         return False
 
     def _find_code_block_index(
-        self, code_blocks: List[FencedBlock], start_line: int, end_line: int
-    ) -> Optional[int]:
+        self, code_blocks: list[FencedBlock], start_line: int, end_line: int
+    ) -> int | None:
         """
         Find the index of a code block by its line range.
 
@@ -630,7 +609,7 @@ class CodeAwareStrategy(BaseStrategy):
     def _create_context_enhanced_chunk(
         self,
         context: CodeContext,
-        lines: List[str],
+        lines: list[str],
         md_text: str,
         config: ChunkConfig,
     ) -> Chunk:
@@ -686,9 +665,9 @@ class CodeAwareStrategy(BaseStrategy):
 
     def _create_grouped_code_chunk(
         self,
-        group: List[CodeContext],
-        all_contexts: List[CodeContext],
-        lines: List[str],
+        group: list[CodeContext],
+        all_contexts: list[CodeContext],
+        lines: list[str],
         md_text: str,
         config: ChunkConfig,
     ) -> Chunk:
@@ -746,7 +725,7 @@ class CodeAwareStrategy(BaseStrategy):
 
         return chunk
 
-    def _determine_relationship_type(self, group: List[CodeContext]) -> str:
+    def _determine_relationship_type(self, group: list[CodeContext]) -> str:
         """
         Determine the type of relationship in a context group.
 

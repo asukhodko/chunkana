@@ -86,18 +86,14 @@ Final content.
 
         first_chunk = chunks[0]
 
-        assert (
-            first_chunk.metadata["content_type"] == "preamble"
-        ), "First chunk should have content_type='preamble'"
-        assert (
-            first_chunk.metadata["header_path"] == "/__preamble__"
-        ), "Preamble should have header_path='/__preamble__'"
-        assert (
-            first_chunk.metadata["header_level"] == 0
-        ), "Preamble should have header_level=0"
-        assert (
-            first_chunk.metadata["chunk_index"] == 0
-        ), "First chunk should have chunk_index=0"
+        assert first_chunk.metadata["content_type"] == "preamble", (
+            "First chunk should have content_type='preamble'"
+        )
+        assert first_chunk.metadata["header_path"] == "/__preamble__", (
+            "Preamble should have header_path='/__preamble__'"
+        )
+        assert first_chunk.metadata["header_level"] == 0, "Preamble should have header_level=0"
+        assert first_chunk.metadata["chunk_index"] == 0, "First chunk should have chunk_index=0"
 
         assert first_chunk.start_line == 1, "Preamble should start at line 1"
 
@@ -121,14 +117,12 @@ Final content.
         first_chunk = chunks[0]
 
         if len(chunks) > 1:
-            assert (
-                "next_content" in first_chunk.metadata
-            ), "First chunk metadata should contain next_content field"
+            assert "next_content" in first_chunk.metadata, (
+                "First chunk metadata should contain next_content field"
+            )
 
             next_content = first_chunk.metadata["next_content"]
-            assert (
-                next_content and next_content.strip()
-            ), "next_content should not be empty"
+            assert next_content and next_content.strip(), "next_content should not be empty"
 
     def test_strategy_field_in_metadata(self, test_document, config):
         """Test that strategy field is present in metadata."""
@@ -136,9 +130,9 @@ Final content.
         chunks = chunker.chunk(test_document)
 
         for chunk in chunks:
-            assert (
-                "strategy" in chunk.metadata
-            ), f"Chunk {chunk.metadata.get('chunk_index')} missing strategy field"
+            assert "strategy" in chunk.metadata, (
+                f"Chunk {chunk.metadata.get('chunk_index')} missing strategy field"
+            )
             assert chunk.metadata["strategy"] == "structural"
 
 
@@ -163,12 +157,12 @@ More content here.
         assert len(chunks) > 0, "Document should produce chunks"
 
         first_chunk = chunks[0]
-        assert (
-            first_chunk.metadata["content_type"] != "preamble"
-        ), "Document starting with header should not have preamble chunk"
-        assert (
-            first_chunk.metadata["header_path"] != "/__preamble__"
-        ), "First chunk should not have preamble header_path"
+        assert first_chunk.metadata["content_type"] != "preamble", (
+            "Document starting with header should not have preamble chunk"
+        )
+        assert first_chunk.metadata["header_path"] != "/__preamble__", (
+            "First chunk should not have preamble header_path"
+        )
 
     def test_no_preamble_with_only_whitespace_before_header(self):
         """Test that whitespace-only content before header doesn't create preamble."""
@@ -184,12 +178,8 @@ Content here.
         chunker = MarkdownChunker(config)
         chunks = chunker.chunk(md_text)
 
-        preamble_chunks = [
-            c for c in chunks if c.metadata.get("content_type") == "preamble"
-        ]
-        assert (
-            len(preamble_chunks) == 0
-        ), "Whitespace-only content should not create preamble chunk"
+        preamble_chunks = [c for c in chunks if c.metadata.get("content_type") == "preamble"]
+        assert len(preamble_chunks) == 0, "Whitespace-only content should not create preamble chunk"
 
 
 class TestLongPreamble:
@@ -263,9 +253,9 @@ Even more content.
         assert len(chunks) > 2, f"Expected multiple chunks, got {len(chunks)}"
 
         indices = [c.metadata["chunk_index"] for c in chunks]
-        assert indices == list(
-            range(len(chunks))
-        ), "chunk_index should be sequential starting from 0"
+        assert indices == list(range(len(chunks))), (
+            "chunk_index should be sequential starting from 0"
+        )
 
         assert chunks[0].metadata["content_type"] == "preamble"
 

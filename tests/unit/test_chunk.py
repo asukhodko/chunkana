@@ -77,14 +77,14 @@ class TestChunkSerialization:
             metadata={"key": "value"},
         )
         d = chunk.to_dict()
-        
+
         assert "content" in d
         assert "start_line" in d
         assert "end_line" in d
         assert "size" in d
         assert "line_count" in d
         assert "metadata" in d
-        
+
         assert d["content"] == "Test content"
         assert d["start_line"] == 1
         assert d["end_line"] == 2
@@ -101,7 +101,7 @@ class TestChunkSerialization:
             "metadata": {"restored": True},
         }
         chunk = Chunk.from_dict(data)
-        
+
         assert chunk.content == "Restored content"
         assert chunk.start_line == 5
         assert chunk.end_line == 10
@@ -110,10 +110,10 @@ class TestChunkSerialization:
     def test_to_json_returns_valid_json(self):
         """to_json should return valid JSON string."""
         import json
-        
+
         chunk = Chunk(content="JSON test", start_line=1, end_line=1)
         json_str = chunk.to_json()
-        
+
         # Should be valid JSON
         parsed = json.loads(json_str)
         assert parsed["content"] == "JSON test"
@@ -121,7 +121,7 @@ class TestChunkSerialization:
     def test_from_json_creates_valid_chunk(self):
         """from_json should create valid Chunk from JSON string."""
         import json
-        
+
         data = {
             "content": "From JSON",
             "start_line": 1,
@@ -130,17 +130,17 @@ class TestChunkSerialization:
         }
         json_str = json.dumps(data)
         chunk = Chunk.from_json(json_str)
-        
+
         assert chunk.content == "From JSON"
 
     def test_roundtrip_preserves_unicode(self):
         """Serialization should preserve unicode content."""
         content = "Привет мир! 你好世界! 🎉"
         chunk = Chunk(content=content, start_line=1, end_line=1)
-        
+
         restored = Chunk.from_dict(chunk.to_dict())
         assert restored.content == content
-        
+
         restored_json = Chunk.from_json(chunk.to_json())
         assert restored_json.content == content
 

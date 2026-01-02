@@ -5,7 +5,7 @@ Provides memory-efficient chunking through buffered processing.
 """
 
 import io
-from typing import Iterator, List, Optional
+from collections.abc import Iterator
 
 from ..chunker import MarkdownChunker
 from ..config import ChunkConfig
@@ -25,7 +25,7 @@ class StreamingChunker:
     def __init__(
         self,
         chunk_config: ChunkConfig,
-        streaming_config: Optional[StreamingConfig] = None,
+        streaming_config: StreamingConfig | None = None,
     ):
         """
         Initialize streaming chunker.
@@ -50,7 +50,7 @@ class StreamingChunker:
         Yields:
             Chunk objects
         """
-        with open(file_path, "r", encoding="utf-8") as f:
+        with open(file_path, encoding="utf-8") as f:
             yield from self.chunk_stream(f)
 
     def chunk_stream(self, stream: io.TextIOBase) -> Iterator[Chunk]:
@@ -66,13 +66,9 @@ class StreamingChunker:
         chunk_index = 0
         window_index = 0
 
-        for buffer, overlap, bytes_processed in self.buffer_manager.read_windows(
-            stream
-        ):
+        for buffer, overlap, bytes_processed in self.buffer_manager.read_windows(stream):
             # Process window
-            for chunk in self._process_window(
-                buffer, overlap, window_index, chunk_index
-            ):
+            for chunk in self._process_window(buffer, overlap, window_index, chunk_index):
                 chunk.metadata["stream_chunk_index"] = chunk_index
                 chunk.metadata["stream_window_index"] = window_index
                 chunk.metadata["bytes_processed"] = bytes_processed
@@ -83,8 +79,8 @@ class StreamingChunker:
 
     def _process_window(
         self,
-        buffer: List[str],
-        overlap: List[str],
+        buffer: list[str],
+        overlap: list[str],
         window_index: int,
         start_chunk_index: int,
     ) -> Iterator[Chunk]:

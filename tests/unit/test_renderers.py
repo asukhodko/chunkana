@@ -67,7 +67,7 @@ class TestRenderJson:
     def test_returns_list_of_dicts(self, sample_chunks):
         """render_json should return list of dictionaries."""
         result = render_json(sample_chunks)
-        
+
         assert isinstance(result, list)
         assert len(result) == 3
         assert all(isinstance(d, dict) for d in result)
@@ -75,7 +75,7 @@ class TestRenderJson:
     def test_dict_contains_chunk_fields(self, sample_chunks):
         """Each dict should contain chunk fields."""
         result = render_json(sample_chunks)
-        
+
         for d in result:
             assert "content" in d
             assert "start_line" in d
@@ -100,7 +100,7 @@ class TestRenderDifyStyle:
     def test_returns_list_of_strings(self, sample_chunks):
         """render_dify_style should return list of strings."""
         result = render_dify_style(sample_chunks)
-        
+
         assert isinstance(result, list)
         assert len(result) == 3
         assert all(isinstance(s, str) for s in result)
@@ -108,7 +108,7 @@ class TestRenderDifyStyle:
     def test_contains_metadata_block(self, sample_chunks):
         """Each string should contain <metadata> block."""
         result = render_dify_style(sample_chunks)
-        
+
         for s in result:
             assert "<metadata>" in s
             assert "</metadata>" in s
@@ -116,13 +116,13 @@ class TestRenderDifyStyle:
     def test_metadata_is_valid_json(self, sample_chunks):
         """Metadata block should contain valid JSON."""
         result = render_dify_style(sample_chunks)
-        
+
         for s in result:
             # Extract JSON between tags
             start = s.index("<metadata>") + len("<metadata>")
             end = s.index("</metadata>")
             json_str = s[start:end].strip()
-            
+
             # Should be valid JSON
             parsed = json.loads(json_str)
             assert isinstance(parsed, dict)
@@ -130,12 +130,12 @@ class TestRenderDifyStyle:
     def test_includes_start_end_line_in_metadata(self, sample_chunks):
         """Metadata should include start_line and end_line."""
         result = render_dify_style(sample_chunks)
-        
+
         # Check first chunk
         start = result[0].index("<metadata>") + len("<metadata>")
         end = result[0].index("</metadata>")
         metadata = json.loads(result[0][start:end].strip())
-        
+
         assert "start_line" in metadata
         assert "end_line" in metadata
         assert metadata["start_line"] == 1
@@ -144,7 +144,7 @@ class TestRenderDifyStyle:
     def test_content_follows_metadata(self, sample_chunks):
         """Chunk content should follow metadata block."""
         result = render_dify_style(sample_chunks)
-        
+
         for i, s in enumerate(result):
             assert sample_chunks[i].content in s
             # Content should be after </metadata>
@@ -159,7 +159,7 @@ class TestRenderWithEmbeddedOverlap:
     def test_returns_list_of_strings(self, sample_chunks):
         """render_with_embedded_overlap should return list of strings."""
         result = render_with_embedded_overlap(sample_chunks)
-        
+
         assert isinstance(result, list)
         assert len(result) == 3
         assert all(isinstance(s, str) for s in result)
@@ -167,14 +167,14 @@ class TestRenderWithEmbeddedOverlap:
     def test_first_chunk_no_previous(self, sample_chunks):
         """First chunk should not have previous content prepended."""
         result = render_with_embedded_overlap(sample_chunks)
-        
+
         # First chunk has no previous_content in metadata
         assert result[0] == sample_chunks[0].content
 
     def test_includes_previous_content(self, sample_chunks):
         """Chunks with previous_content should have it prepended."""
         result = render_with_embedded_overlap(sample_chunks)
-        
+
         # Second chunk has previous_content
         assert "...from first chunk" in result[1]
         assert "Second chunk content" in result[1]
@@ -182,7 +182,7 @@ class TestRenderWithEmbeddedOverlap:
     def test_includes_next_content(self, sample_chunks):
         """Chunks with next_content should have it appended."""
         result = render_with_embedded_overlap(sample_chunks)
-        
+
         # Third chunk has both previous and next
         assert "...from second chunk" in result[2]
         assert "Third chunk content" in result[2]
@@ -201,7 +201,7 @@ class TestRenderWithPrevOverlap:
     def test_returns_list_of_strings(self, sample_chunks):
         """render_with_prev_overlap should return list of strings."""
         result = render_with_prev_overlap(sample_chunks)
-        
+
         assert isinstance(result, list)
         assert len(result) == 3
         assert all(isinstance(s, str) for s in result)
@@ -209,20 +209,20 @@ class TestRenderWithPrevOverlap:
     def test_first_chunk_no_previous(self, sample_chunks):
         """First chunk should not have previous content prepended."""
         result = render_with_prev_overlap(sample_chunks)
-        
+
         assert result[0] == sample_chunks[0].content
 
     def test_includes_previous_content(self, sample_chunks):
         """Chunks with previous_content should have it prepended."""
         result = render_with_prev_overlap(sample_chunks)
-        
+
         assert "...from first chunk" in result[1]
         assert "Second chunk content" in result[1]
 
     def test_does_not_include_next_content(self, sample_chunks):
         """render_with_prev_overlap should NOT include next_content."""
         result = render_with_prev_overlap(sample_chunks)
-        
+
         # Third chunk has next_content in metadata, but it should NOT be in output
         assert "preview of fourth..." not in result[2]
         # But previous should still be there
@@ -245,9 +245,14 @@ class TestRendererEdgeCases:
             content="Привет мир! 你好世界!",
             start_line=1,
             end_line=1,
-            metadata={"chunk_index": 0, "strategy": "test", "header_path": "", "content_type": "text"},
+            metadata={
+                "chunk_index": 0,
+                "strategy": "test",
+                "header_path": "",
+                "content_type": "text",
+            },
         )
-        
+
         result = render_dify_style([chunk])
         assert "Привет мир!" in result[0]
         assert "你好世界!" in result[0]
@@ -258,9 +263,14 @@ class TestRendererEdgeCases:
             content='Content with "quotes" and \\backslash',
             start_line=1,
             end_line=1,
-            metadata={"chunk_index": 0, "strategy": "test", "header_path": "", "content_type": "text"},
+            metadata={
+                "chunk_index": 0,
+                "strategy": "test",
+                "header_path": "",
+                "content_type": "text",
+            },
         )
-        
+
         result = render_dify_style([chunk])
         # Should not raise and should contain escaped content
         assert "quotes" in result[0]
@@ -280,6 +290,6 @@ class TestRendererEdgeCases:
                 "next_content": "",
             },
         )
-        
+
         result = render_with_embedded_overlap([chunk])
         assert result[0] == "Main content"

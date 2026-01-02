@@ -14,7 +14,8 @@ from __future__ import annotations
 
 import io
 import re
-from typing import TYPE_CHECKING, Iterator, List, Optional
+from collections.abc import Iterator
+from typing import TYPE_CHECKING
 
 from .adaptive_sizing import AdaptiveSizeCalculator
 from .config import ChunkConfig
@@ -42,7 +43,7 @@ class MarkdownChunker:
     - No duplication
     """
 
-    def __init__(self, config: Optional[ChunkConfig] = None):
+    def __init__(self, config: ChunkConfig | None = None):
         """
         Initialize chunker.
 
@@ -75,7 +76,7 @@ class MarkdownChunker:
             text = re.sub(r"\s+\^[a-zA-Z0-9]+\s*$", "", text, flags=re.MULTILINE)
         return text
 
-    def chunk(self, md_text: str) -> List[Chunk]:
+    def chunk(self, md_text: str) -> list[Chunk]:
         """
         Chunk a markdown document.
 
@@ -112,9 +113,7 @@ class MarkdownChunker:
         adaptive_metadata = {}
         if self.config.use_adaptive_sizing:
             calculator = AdaptiveSizeCalculator(self.config.adaptive_config)
-            adaptive_max_size = calculator.calculate_optimal_size(
-                normalized_text, analysis
-            )
+            adaptive_max_size = calculator.calculate_optimal_size(normalized_text, analysis)
             complexity = calculator.calculate_complexity(analysis)
             scale_factor = calculator.get_scale_factor(complexity)
 
@@ -236,7 +235,7 @@ class MarkdownChunker:
         return self._hierarchy_builder.build(chunks, md_text)
 
     def chunk_file_streaming(
-        self, file_path: str, streaming_config: Optional[StreamingConfig] = None
+        self, file_path: str, streaming_config: StreamingConfig | None = None
     ) -> Iterator[Chunk]:
         """
         Chunk file in streaming mode for memory efficiency.
@@ -262,7 +261,7 @@ class MarkdownChunker:
         yield from streamer.chunk_file(file_path)
 
     def chunk_stream(
-        self, stream: io.TextIOBase, streaming_config: Optional[StreamingConfig] = None
+        self, stream: io.TextIOBase, streaming_config: StreamingConfig | None = None
     ) -> Iterator[Chunk]:
         """
         Chunk stream in streaming mode for memory efficiency.
@@ -287,7 +286,7 @@ class MarkdownChunker:
         streamer = StreamingChunker(self.config, config)
         yield from streamer.chunk_stream(stream)
 
-    def _apply_overlap(self, chunks: List[Chunk]) -> List[Chunk]:
+    def _apply_overlap(self, chunks: list[Chunk]) -> list[Chunk]:
         """
         Apply metadata-only overlap context between chunks.
 
@@ -339,9 +338,7 @@ class MarkdownChunker:
                 max_overlap = int(len(prev_chunk.content) * self.config.overlap_cap_ratio)
                 effective_overlap_size = min(self.config.overlap_size, max_overlap)
 
-                overlap_text = self._extract_overlap_end(
-                    prev_chunk.content, effective_overlap_size
-                )
+                overlap_text = self._extract_overlap_end(prev_chunk.content, effective_overlap_size)
                 chunks[i].metadata["previous_content"] = overlap_text
                 chunks[i].metadata["overlap_size"] = len(overlap_text)
 
@@ -419,7 +416,7 @@ class MarkdownChunker:
 
         return text
 
-    def _validate(self, chunks: List[Chunk], original: str) -> None:
+    def _validate(self, chunks: list[Chunk], original: str) -> None:
         """
         Validate chunking results.
 
@@ -459,7 +456,7 @@ class MarkdownChunker:
 
         # PROP-4 and PROP-5 are enforced by Chunk.__post_init__
 
-    def _merge_small_chunks(self, chunks: List[Chunk]) -> List[Chunk]:
+    def _merge_small_chunks(self, chunks: list[Chunk]) -> list[Chunk]:
         """
         Merge chunks smaller than min_chunk_size with adjacent chunks.
 
@@ -483,7 +480,7 @@ class MarkdownChunker:
         chunks = self._merge_header_chunks(chunks)
 
         # Phase 2: Size-based merging for remaining small chunks
-        result: List[Chunk] = []
+        result: list[Chunk] = []
         i = 0
 
         while i < len(chunks):
@@ -505,7 +502,7 @@ class MarkdownChunker:
 
         return result
 
-    def _merge_header_chunks(self, chunks: List[Chunk]) -> List[Chunk]:
+    def _merge_header_chunks(self, chunks: list[Chunk]) -> list[Chunk]:
         """
         Merge small header-only chunks with their section body.
 
@@ -532,9 +529,7 @@ class MarkdownChunker:
             current = chunks[i]
 
             # Check if this chunk should be merged with next
-            if i + 1 < len(chunks) and self._should_merge_with_next(
-                current, chunks[i + 1]
-            ):
+            if i + 1 < len(chunks) and self._should_merge_with_next(current, chunks[i + 1]):
                 next_chunk = chunks[i + 1]
 
                 # Merge current header chunk with next chunk
@@ -556,19 +551,13 @@ class MarkdownChunker:
                         merged_content
                     )
                 # Preserve top-level header_path from current chunk
-                if (
-                    "section_tags" in current.metadata
-                    and "section_tags" in next_chunk.metadata
-                ):
+                if "section_tags" in current.metadata and "section_tags" in next_chunk.metadata:
                     # Combine section tags from both chunks
                     merged_chunk.metadata["section_tags"] = (
-                        current.metadata["section_tags"]
-                        + next_chunk.metadata["section_tags"]
+                        current.metadata["section_tags"] + next_chunk.metadata["section_tags"]
                     )
                 elif "section_tags" in next_chunk.metadata:
-                    merged_chunk.metadata["section_tags"] = next_chunk.metadata[
-                        "section_tags"
-                    ]
+                    merged_chunk.metadata["section_tags"] = next_chunk.metadata["section_tags"]
 
                 result.append(merged_chunk)
                 i += 2  # Skip next chunk since we merged it
@@ -687,7 +676,7 @@ class MarkdownChunker:
         return False
 
     def _try_merge(
-        self, chunk: Chunk, result: List[Chunk], all_chunks: List[Chunk], index: int
+        self, chunk: Chunk, result: list[Chunk], all_chunks: list[Chunk], index: int
     ) -> bool:
         """
         Try to merge a small chunk with adjacent chunks.
@@ -718,9 +707,7 @@ class MarkdownChunker:
         # Only merge if both are preamble or both are not preamble
         return chunk1_is_preamble == chunk2_is_preamble
 
-    def _create_merged_chunk(
-        self, chunk1: Chunk, chunk2: Chunk, metadata_base: dict
-    ) -> Chunk:
+    def _create_merged_chunk(self, chunk1: Chunk, chunk2: Chunk, metadata_base: dict) -> Chunk:
         """Create a merged chunk from two chunks."""
         merged_content = chunk1.content + "\n\n" + chunk2.content
         merged_chunk = Chunk(
@@ -734,13 +721,11 @@ class MarkdownChunker:
         type1 = chunk1.metadata.get("content_type", "")
         type2 = chunk2.metadata.get("content_type", "")
         if type1 in ("code", "table") or type2 in ("code", "table"):
-            merged_chunk.metadata["content_type"] = self._detect_content_type(
-                merged_content
-            )
+            merged_chunk.metadata["content_type"] = self._detect_content_type(merged_content)
 
         return merged_chunk
 
-    def _try_merge_with_previous(self, chunk: Chunk, result: List[Chunk]) -> bool:
+    def _try_merge_with_previous(self, chunk: Chunk, result: list[Chunk]) -> bool:
         """Try to merge chunk with previous chunk in result."""
         prev_chunk = result[-1]
 
@@ -761,9 +746,7 @@ class MarkdownChunker:
         result[-1] = merged_chunk
         return True
 
-    def _try_merge_with_next(
-        self, chunk: Chunk, all_chunks: List[Chunk], index: int
-    ) -> bool:
+    def _try_merge_with_next(self, chunk: Chunk, all_chunks: list[Chunk], index: int) -> bool:
         """Try to merge chunk with next chunk in all_chunks."""
         next_chunk = all_chunks[index + 1]
 
@@ -811,7 +794,7 @@ class MarkdownChunker:
 
         return parts1 == parts2
 
-    def _add_metadata(self, chunks: List[Chunk], strategy_name: str) -> List[Chunk]:
+    def _add_metadata(self, chunks: list[Chunk], strategy_name: str) -> list[Chunk]:
         """
         Add standard metadata to all chunks.
 
@@ -826,9 +809,7 @@ class MarkdownChunker:
             chunk.metadata["chunk_index"] = i
             # Don't overwrite content_type if already set (e.g., "preamble")
             if "content_type" not in chunk.metadata:
-                chunk.metadata["content_type"] = self._detect_content_type(
-                    chunk.content
-                )
+                chunk.metadata["content_type"] = self._detect_content_type(chunk.content)
             chunk.metadata["has_code"] = "```" in chunk.content
             chunk.metadata["strategy"] = strategy_name
 
@@ -853,7 +834,7 @@ class MarkdownChunker:
             return "text"
 
     def chunk_simple(
-        self, text: str, config: Optional[dict] = None, strategy: Optional[str] = None
+        self, text: str, config: dict | None = None, strategy: str | None = None
     ) -> dict:
         """
         Simple chunking method that returns dictionary format.
@@ -895,9 +876,7 @@ class MarkdownChunker:
                     "preserve_atomic_blocks",
                     "strategy_override",
                 }
-                config_dict = {
-                    k: v for k, v in config_dict.items() if k in valid_params
-                }
+                config_dict = {k: v for k, v in config_dict.items() if k in valid_params}
 
                 temp_config = ChunkConfig(**config_dict)
                 chunker = MarkdownChunker(temp_config)

@@ -7,7 +7,7 @@ Provides backward-compatible API for existing code using v1 interfaces.
 """
 
 import warnings
-from typing import Any, List, Optional
+from typing import Any
 
 from .chunker import MarkdownChunker
 from .config import ChunkConfig
@@ -34,7 +34,7 @@ class LegacyMarkdownChunker:
     Provides v1-compatible interface using v2 implementation.
     """
 
-    def __init__(self, config: Optional[ChunkConfig] = None, **legacy_kwargs):
+    def __init__(self, config: ChunkConfig | None = None, **legacy_kwargs):
         """
         Initialize with optional legacy parameters.
 
@@ -90,12 +90,12 @@ class LegacyMarkdownChunker:
 
 
 # Convenience functions for backward compatibility
-def chunk_text(text: str, config: Optional[ChunkConfig] = None) -> List[Chunk]:
+def chunk_text(text: str, config: ChunkConfig | None = None) -> list[Chunk]:
     """Chunk text using v2 implementation."""
     return MarkdownChunker(config).chunk(text)
 
 
-def chunk_file(path: str, config: Optional[ChunkConfig] = None) -> List[Chunk]:
+def chunk_file(path: str, config: ChunkConfig | None = None) -> list[Chunk]:
     """Chunk file using v2 implementation."""
     with open(path, encoding="utf-8") as f:
         return chunk_text(f.read(), config)

@@ -28,23 +28,23 @@ def get_fixtures():
 def test_baseline_compatibility(fixture_path: Path):
     """Ensure chunkana output matches v2 golden outputs."""
     golden_path = GOLDEN_DIR / f"{fixture_path.stem}.json"
-    
+
     if not golden_path.exists():
         pytest.skip(f"Golden output not found: {golden_path}")
-    
+
     # Load fixture and golden output
     markdown = fixture_path.read_text(encoding="utf-8")
     expected = json.loads(golden_path.read_text(encoding="utf-8"))
-    
+
     # Chunk with chunkana
     chunks = chunk_markdown(markdown)
     actual = [c.to_dict() for c in chunks]
-    
+
     # Compare chunk count
     assert len(actual) == len(expected["chunks"]), (
         f"Chunk count mismatch: expected {len(expected['chunks'])}, got {len(actual)}"
     )
-    
+
     # Compare each chunk
     for i, (a, e) in enumerate(zip(actual, expected["chunks"])):
         # Line numbers must match exactly
@@ -54,13 +54,13 @@ def test_baseline_compatibility(fixture_path: Path):
         assert a["end_line"] == e["end_line"], (
             f"Chunk {i}: end_line mismatch: expected {e['end_line']}, got {a['end_line']}"
         )
-        
+
         # Strategy must match
         assert a["metadata"]["strategy"] == e["metadata"]["strategy"], (
             f"Chunk {i}: strategy mismatch: "
             f"expected {e['metadata']['strategy']}, got {a['metadata']['strategy']}"
         )
-        
+
         # Content comparison: normalize line endings only, NO .strip()
         # Using .strip() hides whitespace bugs - don't do it
         actual_content = a["content"].replace("\r\n", "\n")

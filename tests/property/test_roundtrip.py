@@ -62,7 +62,7 @@ def valid_chunker_config(draw):
     max_chunk_size = draw(st.integers(min_value=100, max_value=100000))
     min_chunk_size = draw(st.integers(min_value=10, max_value=max_chunk_size // 2))
     overlap_size = draw(st.integers(min_value=0, max_value=max_chunk_size - 1))
-    
+
     return ChunkerConfig(
         max_chunk_size=max_chunk_size,
         min_chunk_size=min_chunk_size,
@@ -88,11 +88,11 @@ def valid_chunker_config(draw):
 class TestChunkRoundTrip:
     """
     Property 1: Chunk Round-Trip (Dict)
-    
+
     For any valid Chunk object, serializing to dict and deserializing back
     should produce an equivalent Chunk with identical content, line numbers,
     and metadata.
-    
+
     Validates: Requirements 1.5, 1.7, 14.1
     """
 
@@ -101,13 +101,13 @@ class TestChunkRoundTrip:
     def test_chunk_dict_roundtrip(self, chunk: Chunk):
         """
         Feature: chunkana-library, Property 1: Chunk Round-Trip (Dict)
-        
+
         For any valid Chunk, to_dict() -> from_dict() produces equivalent Chunk.
         """
         # Serialize and deserialize
         serialized = chunk.to_dict()
         restored = Chunk.from_dict(serialized)
-        
+
         # Verify equivalence
         assert restored.content == chunk.content
         assert restored.start_line == chunk.start_line
@@ -118,10 +118,10 @@ class TestChunkRoundTrip:
 class TestChunkJsonRoundTrip:
     """
     Property 2: Chunk Round-Trip (JSON)
-    
+
     For any valid Chunk object, serializing to JSON string and deserializing
     back should produce an equivalent Chunk.
-    
+
     Validates: Requirements 1.6, 1.8, 14.2
     """
 
@@ -130,13 +130,13 @@ class TestChunkJsonRoundTrip:
     def test_chunk_json_roundtrip(self, chunk: Chunk):
         """
         Feature: chunkana-library, Property 2: Chunk Round-Trip (JSON)
-        
+
         For any valid Chunk, to_json() -> from_json() produces equivalent Chunk.
         """
         # Serialize and deserialize
         json_str = chunk.to_json()
         restored = Chunk.from_json(json_str)
-        
+
         # Verify equivalence
         assert restored.content == chunk.content
         assert restored.start_line == chunk.start_line
@@ -156,10 +156,10 @@ class TestChunkJsonRoundTrip:
 class TestChunkerConfigRoundTrip:
     """
     Property 3: ChunkerConfig Round-Trip
-    
+
     For any valid ChunkerConfig object, serializing to dict and deserializing
     back should produce an equivalent config with identical parameters.
-    
+
     Validates: Requirements 2.8, 14.3
     """
 
@@ -168,14 +168,14 @@ class TestChunkerConfigRoundTrip:
     def test_config_dict_roundtrip(self, config: ChunkerConfig):
         """
         Feature: chunkana-library, Property 3: ChunkerConfig Round-Trip
-        
+
         For any valid ChunkerConfig, to_dict() -> from_dict() produces
         equivalent config.
         """
         # Serialize and deserialize
         serialized = config.to_dict()
         restored = ChunkerConfig.from_dict(serialized)
-        
+
         # Verify core parameters match
         assert restored.max_chunk_size == config.max_chunk_size
         assert restored.min_chunk_size == config.min_chunk_size

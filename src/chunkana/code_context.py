@@ -9,7 +9,6 @@ pairs, and sequential examples.
 import re
 from dataclasses import dataclass
 from enum import Enum
-from typing import List, Optional
 
 from .types import FencedBlock
 
@@ -50,10 +49,10 @@ class CodeContext:
 
     code_block: FencedBlock
     role: CodeBlockRole
-    explanation_before: Optional[str] = None
-    explanation_after: Optional[str] = None
-    related_blocks: List[FencedBlock] = None
-    output_block: Optional[FencedBlock] = None
+    explanation_before: str | None = None
+    explanation_after: str | None = None
+    related_blocks: list[FencedBlock] = None
+    output_block: FencedBlock | None = None
 
     def __post_init__(self):
         """Initialize default values for mutable fields."""
@@ -103,7 +102,7 @@ class CodeContextBinder:
         max_context_chars_before: int = 500,
         max_context_chars_after: int = 300,
         related_block_max_gap: int = 5,
-        lines: Optional[List[str]] = None,
+        lines: list[str] | None = None,
     ):
         """
         Initialize code context binder.
@@ -123,7 +122,7 @@ class CodeContextBinder:
         self,
         code_block: FencedBlock,
         md_text: str,
-        all_blocks: List[FencedBlock],
+        all_blocks: list[FencedBlock],
     ) -> CodeContext:
         """
         Create full context binding for a code block.
@@ -192,7 +191,7 @@ class CodeContextBinder:
         # Default to example
         return CodeBlockRole.EXAMPLE
 
-    def _get_cached_role(self, block: FencedBlock) -> Optional[CodeBlockRole]:
+    def _get_cached_role(self, block: FencedBlock) -> CodeBlockRole | None:
         """Get cached role from block if available."""
         if hasattr(block, "context_role") and block.context_role:
             try:
@@ -201,7 +200,7 @@ class CodeContextBinder:
                 pass
         return None
 
-    def _classify_by_language(self, block: FencedBlock) -> Optional[CodeBlockRole]:
+    def _classify_by_language(self, block: FencedBlock) -> CodeBlockRole | None:
         """Classify code block by language tag."""
         if not block.language:
             return None
@@ -214,7 +213,7 @@ class CodeContextBinder:
 
         return None
 
-    def _classify_by_pattern(self, preceding: str) -> Optional[CodeBlockRole]:
+    def _classify_by_pattern(self, preceding: str) -> CodeBlockRole | None:
         """Classify code block by patterns in preceding text."""
         # Check for output patterns
         for pattern in self.OUTPUT_PATTERNS:
@@ -256,11 +255,7 @@ class CodeContextBinder:
             Preceding text (trimmed to chars)
         """
         # O1: Use cached lines if available
-        lines = (
-            self._cached_lines
-            if self._cached_lines is not None
-            else md_text.split("\n")
-        )
+        lines = self._cached_lines if self._cached_lines is not None else md_text.split("\n")
 
         if block.start_line < 1 or block.start_line > len(lines):
             return ""
@@ -283,7 +278,7 @@ class CodeContextBinder:
 
     def _extract_explanation_before(
         self, code_block: FencedBlock, md_text: str, max_chars: int
-    ) -> Optional[str]:
+    ) -> str | None:
         """
         Extract explanation text before a code block.
 
@@ -296,11 +291,7 @@ class CodeContextBinder:
             Extracted explanation or None
         """
         # O1: Use cached lines if available
-        lines = (
-            self._cached_lines
-            if self._cached_lines is not None
-            else md_text.split("\n")
-        )
+        lines = self._cached_lines if self._cached_lines is not None else md_text.split("\n")
 
         # Start from line before code block fence
         end_line_idx = code_block.start_line - 2  # 0-indexed, exclude fence
@@ -326,7 +317,7 @@ class CodeContextBinder:
 
     def _extract_explanation_after(
         self, code_block: FencedBlock, md_text: str, max_chars: int
-    ) -> Optional[str]:
+    ) -> str | None:
         """
         Extract explanation text after a code block.
 
@@ -339,20 +330,14 @@ class CodeContextBinder:
             Extracted explanation or None
         """
         # O1: Use cached lines if available
-        lines = (
-            self._cached_lines
-            if self._cached_lines is not None
-            else md_text.split("\n")
-        )
+        lines = self._cached_lines if self._cached_lines is not None else md_text.split("\n")
 
         # Start from line after code block closing fence
         start_line_idx = code_block.end_line  # 0-indexed (end_line is 1-indexed)
         if start_line_idx >= len(lines):
             return None
 
-        end_line_idx = min(
-            len(lines) - 1, start_line_idx + 10
-        )  # Look ahead up to 10 lines
+        end_line_idx = min(len(lines) - 1, start_line_idx + 10)  # Look ahead up to 10 lines
 
         # Extract text
         text_lines = lines[start_line_idx : end_line_idx + 1]
@@ -372,9 +357,9 @@ class CodeContextBinder:
     def _find_related_blocks(
         self,
         block: FencedBlock,
-        all_blocks: List[FencedBlock],
+        all_blocks: list[FencedBlock],
         md_text: str,
-    ) -> List[FencedBlock]:
+    ) -> list[FencedBlock]:
         """
         Find code blocks related to the given block.
 
@@ -386,7 +371,7 @@ class CodeContextBinder:
         Returns:
             List of related blocks
         """
-        related: List[FencedBlock] = []
+        related: list[FencedBlock] = []
 
         try:
             block_idx = all_blocks.index(block)
@@ -460,9 +445,9 @@ class CodeContextBinder:
     def _find_output_block(
         self,
         block: FencedBlock,
-        all_blocks: List[FencedBlock],
+        all_blocks: list[FencedBlock],
         md_text: str,
-    ) -> Optional[FencedBlock]:
+    ) -> FencedBlock | None:
         """
         Find associated output block for a code block.
 
@@ -496,7 +481,7 @@ class CodeContextBinder:
         block: FencedBlock,
         next_block: FencedBlock,
         md_text: str,
-    ) -> Optional[FencedBlock]:
+    ) -> FencedBlock | None:
         """Check if next block is an output block for current block."""
         next_role = self._determine_role(next_block, md_text)
         gap = abs(block.end_line - next_block.start_line)

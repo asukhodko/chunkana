@@ -6,7 +6,6 @@ Simplified from 1720 lines to ~150 lines.
 """
 
 import re
-from typing import List, Tuple
 
 from ..config import ChunkConfig
 from ..types import Chunk, ContentAnalysis, Header
@@ -40,7 +39,7 @@ class StructuralStrategy(BaseStrategy):
         """
         self.max_structural_level = max_structural_level
         # O4: Header stack cache for performance optimization
-        self._header_stack_cache: dict[int, List[Header]] = {}
+        self._header_stack_cache: dict[int, list[Header]] = {}
 
     @property
     def name(self) -> str:
@@ -54,14 +53,9 @@ class StructuralStrategy(BaseStrategy):
         """
         Can handle if document has enough headers and hierarchy.
         """
-        return (
-            analysis.header_count >= config.structure_threshold
-            and analysis.max_header_depth > 1
-        )
+        return analysis.header_count >= config.structure_threshold and analysis.max_header_depth > 1
 
-    def apply(
-        self, md_text: str, analysis: ContentAnalysis, config: ChunkConfig
-    ) -> List[Chunk]:
+    def apply(self, md_text: str, analysis: ContentAnalysis, config: ChunkConfig) -> list[Chunk]:
         """
         Apply structural strategy.
 
@@ -105,9 +99,7 @@ class StructuralStrategy(BaseStrategy):
 
         # Filter to structural headers only (level <= max_structural_level)
         # H3+ headers don't create new sections - they stay inside parent section
-        structural_headers = [
-            h for h in headers if h.level <= self.max_structural_level
-        ]
+        structural_headers = [h for h in headers if h.level <= self.max_structural_level]
 
         # Process sections between STRUCTURAL headers only
         for i, header in enumerate(structural_headers):
@@ -129,10 +121,8 @@ class StructuralStrategy(BaseStrategy):
             # Check if section fits in one chunk
             if len(section_content) <= config.max_chunk_size:
                 # Build header_path and section_tags with new semantics
-                header_path, section_tags, header_level = (
-                    self._build_header_path_for_chunk(
-                        section_content, headers, start_line
-                    )
+                header_path, section_tags, header_level = self._build_header_path_for_chunk(
+                    section_content, headers, start_line
                 )
 
                 chunk_meta = {
@@ -164,10 +154,10 @@ class StructuralStrategy(BaseStrategy):
         section_content: str,
         start_line: int,
         end_line: int,
-        headers: List[Header],
+        headers: list[Header],
         analysis: ContentAnalysis,
         config: ChunkConfig,
-    ) -> List[Chunk]:
+    ) -> list[Chunk]:
         """Split large section, preserving atomic blocks if present.
 
         Args:
@@ -191,13 +181,11 @@ class StructuralStrategy(BaseStrategy):
             )
         else:
             # No atomic blocks - simple split
-            section_chunks = self._split_text_to_size(
-                section_content, start_line, config
-            )
+            section_chunks = self._split_text_to_size(section_content, start_line, config)
 
         # Build section's header_path ONCE - all sub-chunks inherit it
-        section_header_path, _, section_header_level = (
-            self._build_header_path_for_chunk(section_content, headers, start_line)
+        section_header_path, _, section_header_level = self._build_header_path_for_chunk(
+            section_content, headers, start_line
         )
 
         for chunk in section_chunks:
@@ -213,7 +201,7 @@ class StructuralStrategy(BaseStrategy):
 
         return section_chunks
 
-    def _build_header_path(self, headers: List[Header]) -> str:
+    def _build_header_path(self, headers: list[Header]) -> str:
         """
         Build header path from header hierarchy.
 
@@ -247,8 +235,8 @@ class StructuralStrategy(BaseStrategy):
     def _get_contextual_header_stack(
         self,
         chunk_start_line: int,
-        all_headers: List[Header],
-    ) -> List[Header]:
+        all_headers: list[Header],
+    ) -> list[Header]:
         """
         Get the active header stack at the start of a chunk.
 
@@ -276,7 +264,7 @@ class StructuralStrategy(BaseStrategy):
         if chunk_start_line in self._header_stack_cache:
             return self._header_stack_cache[chunk_start_line]
 
-        stack: List[Header] = []
+        stack: list[Header] = []
 
         for header in all_headers:
             # Only consider headers BEFORE chunk start
@@ -293,7 +281,7 @@ class StructuralStrategy(BaseStrategy):
         self._header_stack_cache[chunk_start_line] = stack
         return stack
 
-    def _get_contextual_level(self, header_stack: List[Header]) -> int:
+    def _get_contextual_level(self, header_stack: list[Header]) -> int:
         """
         Get the contextual level from header stack.
 
@@ -311,7 +299,7 @@ class StructuralStrategy(BaseStrategy):
             return 0
         return header_stack[-1].level
 
-    def _build_header_path_from_stack(self, header_stack: List[Header]) -> str:
+    def _build_header_path_from_stack(self, header_stack: list[Header]) -> str:
         """
         Build header_path from contextual header stack.
 
@@ -329,9 +317,9 @@ class StructuralStrategy(BaseStrategy):
         self,
         chunk_content: str,
         contextual_level: int,
-        header_stack: List[Header],
-        first_header_in_path: Tuple[int, str] | None = None,
-    ) -> List[str]:
+        header_stack: list[Header],
+        first_header_in_path: tuple[int, str] | None = None,
+    ) -> list[str]:
         """
         Build section_tags from headers inside the chunk.
 
@@ -376,7 +364,7 @@ class StructuralStrategy(BaseStrategy):
         # Find headers in chunk content
         chunk_headers = self._find_headers_in_content(chunk_content)
 
-        section_tags: List[str] = []
+        section_tags: list[str] = []
         seen_texts: set = set()
 
         for level, text in chunk_headers:
@@ -390,19 +378,15 @@ class StructuralStrategy(BaseStrategy):
 
             # Add if level > contextual_level (child of root section)
             # This works for ANY contextual_level, not just max_structural_level
-            if level > contextual_level:
-                section_tags.append(text)
-                seen_texts.add(text)
-            # Add if level == contextual_level (sibling of root, not root itself)
-            elif level == contextual_level:
+            if level > contextual_level or level == contextual_level:
                 section_tags.append(text)
                 seen_texts.add(text)
 
         return section_tags
 
     def _find_headers_in_range(
-        self, headers: List[Header], start_line: int, end_line: int
-    ) -> List[Header]:
+        self, headers: list[Header], start_line: int, end_line: int
+    ) -> list[Header]:
         """
         Find all headers within a line range.
 
@@ -416,7 +400,7 @@ class StructuralStrategy(BaseStrategy):
         """
         return [h for h in headers if start_line <= h.line <= end_line]
 
-    def _find_headers_in_content(self, content: str) -> List[Tuple[int, str]]:
+    def _find_headers_in_content(self, content: str) -> list[tuple[int, str]]:
         """
         Find headers directly in chunk content.
 
@@ -448,8 +432,8 @@ class StructuralStrategy(BaseStrategy):
         return headers
 
     def _build_header_path_for_chunk(
-        self, chunk_content: str, all_headers: List[Header], chunk_start_line: int
-    ) -> Tuple[str, List[str], int]:
+        self, chunk_content: str, all_headers: list[Header], chunk_start_line: int
+    ) -> tuple[str, list[str], int]:
         """
         Build header_path and section_tags for a chunk.
 
@@ -489,12 +473,11 @@ class StructuralStrategy(BaseStrategy):
         # Check for single-header-only chunk special case
         is_single_header_only = (
             len(chunk_headers) == 1
-            and chunk_content.strip()
-            == f"{'#' * chunk_headers[0][0]} {chunk_headers[0][1]}"
+            and chunk_content.strip() == f"{'#' * chunk_headers[0][0]} {chunk_headers[0][1]}"
         )
 
         # Track if we added a header from this chunk to the path
-        first_header_added_to_path: Tuple[int, str] | None = None
+        first_header_added_to_path: tuple[int, str] | None = None
 
         if chunk_headers:
             first_level, first_text = chunk_headers[0]
@@ -546,9 +529,9 @@ class StructuralStrategy(BaseStrategy):
         self,
         section_content: str,
         section_start_line: int,
-        atomic_blocks: List[Tuple[int, int, str]],
+        atomic_blocks: list[tuple[int, int, str]],
         config: ChunkConfig,
-    ) -> List[Chunk]:
+    ) -> list[Chunk]:
         """Split section while preserving atomic blocks (code, tables, LaTeX).
 
         Args:
@@ -572,9 +555,7 @@ class StructuralStrategy(BaseStrategy):
                 ]
                 text_content = "\n".join(text_lines)
                 if text_content.strip():
-                    text_chunks = self._split_text_to_size(
-                        text_content, current_line, config
-                    )
+                    text_chunks = self._split_text_to_size(text_content, current_line, config)
                     chunks.extend(text_chunks)
 
             # Handle atomic block
@@ -595,11 +576,7 @@ class StructuralStrategy(BaseStrategy):
                     reason = (
                         "code_block_integrity"
                         if block_type == "code"
-                        else (
-                            "table_integrity"
-                            if block_type == "table"
-                            else "latex_integrity"
-                        )
+                        else ("table_integrity" if block_type == "table" else "latex_integrity")
                     )
                     self._set_oversize_metadata(chunk, reason, config)
                 chunks.append(chunk)
@@ -612,9 +589,7 @@ class StructuralStrategy(BaseStrategy):
             text_lines = lines[current_line - section_start_line :]
             text_content = "\n".join(text_lines)
             if text_content.strip():
-                text_chunks = self._split_text_to_size(
-                    text_content, current_line, config
-                )
+                text_chunks = self._split_text_to_size(text_content, current_line, config)
                 chunks.extend(text_chunks)
 
         return chunks
