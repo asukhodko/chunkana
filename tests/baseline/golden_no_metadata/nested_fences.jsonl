@@ -1,0 +1,1 @@
+{"output": "# Minimal Nested Fencing Example\n\nThis demonstrates the minimal viable nested structure.\n\n\n````markdown\nUse code blocks like this:\n\n```python\ndef example():\n    pass\n```\n````\n\n\nThis is the simplest case of nested fencing.\n"}
