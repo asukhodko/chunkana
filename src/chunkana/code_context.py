@@ -433,14 +433,11 @@ class CodeContextBinder:
         ):
             return True
 
-        if (
+        return (
             role2 in [CodeBlockRole.EXAMPLE, CodeBlockRole.SETUP]
             and role1 == CodeBlockRole.OUTPUT
             and gap <= 6
-        ):
-            return True
-
-        return False
+        )
 
     def _find_output_block(
         self,
@@ -491,9 +488,12 @@ class CodeContextBinder:
             return next_block
 
         # Check if empty-language block with "Output:" in between
-        if (not next_block.language or next_block.language == "") and gap <= 6:
-            if self._has_output_marker_between(block, next_block, md_text):
-                return next_block
+        if (
+            (not next_block.language or next_block.language == "")
+            and gap <= 6
+            and self._has_output_marker_between(block, next_block, md_text)
+        ):
+            return next_block
 
         return None
 

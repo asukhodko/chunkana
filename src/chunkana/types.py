@@ -369,7 +369,7 @@ class Chunk:
         try:
             data = json.loads(json_str)
         except json.JSONDecodeError as e:
-            raise ValueError(f"Invalid JSON: {e}")
+            raise ValueError(f"Invalid JSON: {e}") from e
         return cls.from_dict(data)
 
 

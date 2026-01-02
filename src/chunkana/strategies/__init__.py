@@ -8,8 +8,6 @@ Four strategies:
 - FallbackStrategy: Universal fallback for any document (priority 4)
 """
 
-from typing import List
-
 from ..config import ChunkConfig
 from ..types import ContentAnalysis
 from .base import BaseStrategy

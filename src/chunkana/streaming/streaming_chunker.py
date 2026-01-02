@@ -64,9 +64,10 @@ class StreamingChunker:
             Chunk objects with streaming metadata
         """
         chunk_index = 0
-        window_index = 0
 
-        for buffer, overlap, bytes_processed in self.buffer_manager.read_windows(stream):
+        for window_index, (buffer, overlap, bytes_processed) in enumerate(
+            self.buffer_manager.read_windows(stream)
+        ):
             # Process window
             for chunk in self._process_window(buffer, overlap, window_index, chunk_index):
                 chunk.metadata["stream_chunk_index"] = chunk_index
@@ -74,8 +75,6 @@ class StreamingChunker:
                 chunk.metadata["bytes_processed"] = bytes_processed
                 yield chunk
                 chunk_index += 1
-
-            window_index += 1
 
     def _process_window(
         self,
@@ -96,5 +95,4 @@ class StreamingChunker:
         chunks = self.base_chunker.chunk(text)
 
         # Yield chunks
-        for chunk in chunks:
-            yield chunk
+        yield from chunks

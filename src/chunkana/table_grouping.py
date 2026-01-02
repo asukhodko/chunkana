@@ -182,10 +182,7 @@ class TableGrouper:
         if not self._check_distance(prev_table, table):
             return False
 
-        if not self._check_section_boundary(prev_table, table, headers):
-            return False
-
-        return True
+        return self._check_section_boundary(prev_table, table, headers)
 
     def _check_count_limit(self, current_count: int) -> bool:
         """Check if adding another table would exceed max_grouped_tables."""
@@ -214,10 +211,7 @@ class TableGrouper:
 
     def _has_header_between(self, start_line: int, end_line: int, headers: list[Header]) -> bool:
         """Check if there's a header between two lines."""
-        for header in headers:
-            if start_line < header.line < end_line:
-                return True
-        return False
+        return any(start_line < header.line < end_line for header in headers)
 
     def _extract_content(self, start_line: int, end_line: int, lines: list[str]) -> str:
         """

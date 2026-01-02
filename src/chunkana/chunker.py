@@ -435,17 +435,16 @@ class MarkdownChunker:
             pass
 
         # PROP-2: Size bounds
-        for i, chunk in enumerate(chunks):
-            if chunk.size > self.config.max_chunk_size:
-                if not chunk.metadata.get("allow_oversize"):
-                    # Set default oversize metadata
-                    chunk.metadata["allow_oversize"] = True
-                    if "```" in chunk.content:
-                        chunk.metadata["oversize_reason"] = "code_block_integrity"
-                    elif "|" in chunk.content and "---" in chunk.content:
-                        chunk.metadata["oversize_reason"] = "table_integrity"
-                    else:
-                        chunk.metadata["oversize_reason"] = "section_integrity"
+        for chunk in chunks:
+            if chunk.size > self.config.max_chunk_size and not chunk.metadata.get("allow_oversize"):
+                # Set default oversize metadata
+                chunk.metadata["allow_oversize"] = True
+                if "```" in chunk.content:
+                    chunk.metadata["oversize_reason"] = "code_block_integrity"
+                elif "|" in chunk.content and "---" in chunk.content:
+                    chunk.metadata["oversize_reason"] = "table_integrity"
+                else:
+                    chunk.metadata["oversize_reason"] = "section_integrity"
 
         # PROP-3: Monotonic ordering
         for i in range(len(chunks) - 1):
@@ -618,10 +617,7 @@ class MarkdownChunker:
             return True
 
         # Child section: next_path starts with current_path
-        if next_path.startswith(current_path + "/"):
-            return True
-
-        return False
+        return next_path.startswith(current_path + "/")
 
     def _is_structurally_strong(self, chunk: Chunk) -> bool:
         """
@@ -670,10 +666,7 @@ class MarkdownChunker:
             return True
 
         # Indicator 3: Meaningful content (> 100 chars after header extraction)
-        if len(non_header_content.strip()) > 100:
-            return True
-
-        return False
+        return len(non_header_content.strip()) > 100
 
     def _try_merge(
         self, chunk: Chunk, result: list[Chunk], all_chunks: list[Chunk], index: int

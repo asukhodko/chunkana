@@ -84,9 +84,8 @@ class SplitDetector:
         tracker_copy = FenceTracker()
         for i, line in enumerate(buffer):
             tracker_copy.track_line(line)
-            if i >= start_idx and not tracker_copy.is_inside_fence():
-                if not line.strip():
-                    return i + 1
+            if i >= start_idx and not tracker_copy.is_inside_fence() and not line.strip():
+                return i + 1
         return None
 
     def _fallback_split(self, start_idx: int) -> int:

@@ -331,7 +331,7 @@ class ListAwareStrategy(BaseStrategy):
         current_items: list[ListItem] = []
         current_start_line = None
 
-        for i, item in enumerate(block.items):
+        for item in block.items:
             # Start new group at top-level items
             if item.depth == 0 and current_items:
                 # Check if current group fits
@@ -459,7 +459,7 @@ class ListAwareStrategy(BaseStrategy):
             Chunk with metadata
         """
         # Collect list types
-        list_types = set(item.list_type.value for item in list_block.items)
+        list_types = {item.list_type.value for item in list_block.items}
 
         # Checkbox stats if applicable
         checkbox_stats = None

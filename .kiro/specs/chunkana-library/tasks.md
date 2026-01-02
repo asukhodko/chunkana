@@ -366,6 +366,7 @@
 | Initial | 111 | 59% |
 | After overlap_cap_ratio fix | 119 | 59% |
 | After test porting | 209 | 64% |
+| After Phase 3 (LaTeX + streaming + lint fixes) | 241 | 71% |
 
 ## Notes
 
@@ -379,3 +380,76 @@
   - Add tests for streaming module
   - Add tests for table_grouping module
   - Add more edge case tests for strategies
+
+---
+
+## Phase 3: Quality Improvements (2025-01-02)
+
+### Current State
+- 209 tests passing
+- Coverage: 64%
+- `make lint` shows ~15 issues (style: SIM102, SIM103, B007, UP035, F401, C401)
+
+### Open Requirements from Original Plan
+- LaTeX formula preservation tests (Property 4 covers atomic blocks, but no specific LaTeX tests)
+- Streaming memory limit tests (streaming module has 0% coverage)
+- Strategy selection tests (already covered in Property 5, but can be enhanced)
+
+- [x] 21. Add LaTeX preservation tests
+  - [x] 21.1 Create property test for LaTeX block integrity
+    - **Property 13: LaTeX Block Integrity**
+    - Test that `$...$`, `$$...$$`, `\begin{equation}...\end{equation}` are not split
+    - **Validates: Requirements 4.3**
+  - [x] 21.2 Create unit tests for LaTeX edge cases
+    - Inline math `$x^2$` within text
+    - Display math `$$\int_0^1 f(x)dx$$`
+    - LaTeX environments: equation, align, matrix
+    - Nested LaTeX in code blocks (should NOT be treated as LaTeX)
+    - _Requirements: 4.3_
+
+- [x] 22. Add streaming module tests
+  - [x] 22.1 Create unit tests for StreamingConfig
+    - Test buffer_size, max_memory_mb parameters
+    - Test validation of invalid values
+    - _Requirements: 8.3_
+  - [x] 22.2 Create unit tests for streaming processor
+    - Test iter_chunks yields chunks correctly
+    - Test chunk_file_streaming with file path
+    - Test stream_window_index in metadata
+    - _Requirements: 8.1, 8.2, 8.5_
+  - [x] 22.3 Create property test for streaming memory bounds
+    - **Property 14: Streaming Memory Bounds**
+    - Test that streaming mode limits memory usage (best effort)
+    - **Validates: Requirements 8.4**
+
+- [x] 23. Fix linter issues
+  - [x] 23.1 Fix unused loop variables (B007)
+    - chunker.py:438 - removed unused `i`
+    - hierarchy.py:424 - renamed `parent_id` to `_parent_id`
+    - strategies/list_aware.py:334 - removed unused `i`
+  - [x] 23.2 Fix nested if statements (SIM102)
+    - chunker.py:439 - combined if statements
+    - code_context.py:494 - combined if statements
+    - strategies/base.py:197 - combined if statements
+    - strategies/code_aware.py:566 - combined if statements
+    - streaming/split_detector.py:87 - combined if statements
+  - [x] 23.3 Fix return condition directly (SIM103)
+    - chunker.py:621 - return bool directly
+    - chunker.py:673 - return condition directly
+    - code_context.py:436 - inline condition
+    - strategies/code_aware.py:585 - return condition directly
+    - table_grouping.py:185 - inline condition
+    - table_grouping.py:217 - use any()
+  - [x] 23.4 Fix deprecated imports (UP035, F401)
+    - strategies/__init__.py:11 - removed unused `typing.List` import
+  - [x] 23.5 Fix generator to set comprehension (C401)
+    - strategies/list_aware.py:462 - use set comprehension
+  - [x] 23.6 Fix additional issues
+    - streaming/streaming_chunker.py - use enumerate() for window_index
+    - streaming/streaming_chunker.py - use yield from
+    - types.py:372 - raise from e
+
+- [x] 24. Checkpoint - Quality improvements complete
+  - All tests pass (241 tests)
+  - `make lint` passes with no errors
+  - Coverage increased with new tests

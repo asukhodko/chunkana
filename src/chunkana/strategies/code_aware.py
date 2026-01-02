@@ -563,14 +563,17 @@ class CodeAwareStrategy(BaseStrategy):
             True if contexts are related
         """
         # Check Before/After pairing
-        if config.preserve_before_after_pairs:
-            if (ctx1.role == CodeBlockRole.BEFORE and ctx2.role == CodeBlockRole.AFTER) or (
-                ctx1.role == CodeBlockRole.AFTER and ctx2.role == CodeBlockRole.BEFORE
-            ):
-                # Check proximity
-                gap = abs(ctx1.code_block.end_line - ctx2.code_block.start_line)
-                if gap <= config.related_block_max_gap:
-                    return True
+        if (
+            config.preserve_before_after_pairs
+            and (
+                (ctx1.role == CodeBlockRole.BEFORE and ctx2.role == CodeBlockRole.AFTER)
+                or (ctx1.role == CodeBlockRole.AFTER and ctx2.role == CodeBlockRole.BEFORE)
+            )
+        ):
+            # Check proximity
+            gap = abs(ctx1.code_block.end_line - ctx2.code_block.start_line)
+            if gap <= config.related_block_max_gap:
+                return True
 
         # Check Code/Output pairing
         if config.bind_output_blocks:
@@ -582,10 +585,7 @@ class CodeAwareStrategy(BaseStrategy):
         # Check if blocks are in each other's related_blocks list
         if ctx2.code_block in ctx1.related_blocks:
             return True
-        if ctx1.code_block in ctx2.related_blocks:
-            return True
-
-        return False
+        return ctx1.code_block in ctx2.related_blocks
 
     def _find_code_block_index(
         self, code_blocks: list[FencedBlock], start_line: int, end_line: int

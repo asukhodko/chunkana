@@ -421,7 +421,7 @@ class HierarchyBuilder:
                 siblings_by_parent.setdefault(parent_id, []).append(chunk)
 
         # Link siblings within each group
-        for parent_id, sibs in siblings_by_parent.items():
+        for _parent_id, sibs in siblings_by_parent.items():
             sibs.sort(key=lambda c: c.start_line)
             for i, chunk in enumerate(sibs):
                 if i > 0:

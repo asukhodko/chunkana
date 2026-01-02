@@ -194,13 +194,11 @@ class BaseStrategy(ABC):
 
         # Add LaTeX blocks in range (only if configured)
         for latex_block in analysis.latex_blocks:
-            if start_line <= latex_block.start_line <= end_line:
-                # Only DISPLAY and ENVIRONMENT types are atomic
-                if latex_block.latex_type in (
-                    LatexType.DISPLAY,
-                    LatexType.ENVIRONMENT,
-                ):
-                    atomic_ranges.append((latex_block.start_line, latex_block.end_line, "latex"))
+            if (
+                start_line <= latex_block.start_line <= end_line
+                and latex_block.latex_type in (LatexType.DISPLAY, LatexType.ENVIRONMENT)
+            ):
+                atomic_ranges.append((latex_block.start_line, latex_block.end_line, "latex"))
 
         # Sort by start line
         atomic_ranges.sort(key=lambda x: x[0])
