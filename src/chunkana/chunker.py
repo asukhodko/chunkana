@@ -26,10 +26,8 @@ from .types import Chunk, ChunkingMetrics
 if TYPE_CHECKING:
     from .streaming import StreamingConfig
 
-# Maximum overlap context as a fraction of chunk size
-# This prevents metadata bloat while allowing larger context for larger chunks
-# For a 4KB chunk, max overlap context = 4096 * 0.35 = 1433 characters
-# For a 1KB chunk, max overlap context = 1024 * 0.35 = 358 characters
+# Note: MAX_OVERLAP_CONTEXT_RATIO is kept for backward compatibility
+# but the actual value is now configurable via config.overlap_cap_ratio
 MAX_OVERLAP_CONTEXT_RATIO = 0.35
 
 
@@ -305,7 +303,7 @@ class MarkdownChunker:
         Context window size:
         - Determined by config.overlap_size (default: 200 characters)
         - Capped at adaptive maximum based on chunk size:
-          max_overlap = min(config.overlap_size, chunk_size * MAX_OVERLAP_CONTEXT_RATIO)
+          max_overlap = min(config.overlap_size, chunk_size * config.overlap_cap_ratio)
         - This allows larger overlap for larger chunks while preventing bloat
         - Word boundary-aware: attempts to break at spaces when possible
 
@@ -318,7 +316,7 @@ class MarkdownChunker:
 
         Key points:
         - overlap_size parameter determines base context window size
-        - Maximum overlap scales with chunk size (35% of chunk size)
+        - Maximum overlap scales with chunk size (overlap_cap_ratio of chunk size, default 0.35)
         - chunk.content remains distinct and non-overlapping
         - Context extraction respects word boundaries
         - Helps language models understand chunk boundaries without text duplication
@@ -337,8 +335,8 @@ class MarkdownChunker:
             # Previous content (for all except first)
             if i > 0:
                 prev_chunk = chunks[i - 1]
-                # Adaptive cap: max overlap = 35% of previous chunk size
-                max_overlap = int(len(prev_chunk.content) * MAX_OVERLAP_CONTEXT_RATIO)
+                # Adaptive cap: max overlap = overlap_cap_ratio of previous chunk size
+                max_overlap = int(len(prev_chunk.content) * self.config.overlap_cap_ratio)
                 effective_overlap_size = min(self.config.overlap_size, max_overlap)
 
                 overlap_text = self._extract_overlap_end(
@@ -350,8 +348,8 @@ class MarkdownChunker:
             # Next content (for all except last)
             if i < len(chunks) - 1:
                 next_chunk = chunks[i + 1]
-                # Adaptive cap: max overlap = 35% of next chunk size
-                max_overlap = int(len(next_chunk.content) * MAX_OVERLAP_CONTEXT_RATIO)
+                # Adaptive cap: max overlap = overlap_cap_ratio of next chunk size
+                max_overlap = int(len(next_chunk.content) * self.config.overlap_cap_ratio)
                 effective_overlap_size = min(self.config.overlap_size, max_overlap)
 
                 overlap_text = self._extract_overlap_start(
@@ -374,7 +372,7 @@ class MarkdownChunker:
 
         Args:
             content: Source content
-            size: Target overlap size (adaptive, capped at 35% of chunk size)
+            size: Target overlap size (adaptive, capped at overlap_cap_ratio of chunk size)
 
         Returns:
             Overlap text from end of content, at most 'size' characters

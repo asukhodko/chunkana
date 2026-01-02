@@ -178,3 +178,48 @@ class TestCodeContextBindingConfig:
         assert restored.related_block_max_gap == config.related_block_max_gap
         assert restored.bind_output_blocks == config.bind_output_blocks
         assert restored.preserve_before_after_pairs == config.preserve_before_after_pairs
+
+
+class TestOverlapCapRatioConfig:
+    """Tests for overlap_cap_ratio configuration."""
+
+    def test_overlap_cap_ratio_default(self):
+        """overlap_cap_ratio should default to 0.35."""
+        config = ChunkerConfig()
+        assert config.overlap_cap_ratio == 0.35
+
+    def test_overlap_cap_ratio_can_be_customized(self):
+        """overlap_cap_ratio can be set to custom value."""
+        config = ChunkerConfig(overlap_cap_ratio=0.5)
+        assert config.overlap_cap_ratio == 0.5
+
+    def test_overlap_cap_ratio_zero_raises_error(self):
+        """overlap_cap_ratio=0 should raise ValueError."""
+        with pytest.raises(ValueError):
+            ChunkerConfig(overlap_cap_ratio=0)
+
+    def test_overlap_cap_ratio_negative_raises_error(self):
+        """Negative overlap_cap_ratio should raise ValueError."""
+        with pytest.raises(ValueError):
+            ChunkerConfig(overlap_cap_ratio=-0.1)
+
+    def test_overlap_cap_ratio_greater_than_one_raises_error(self):
+        """overlap_cap_ratio > 1 should raise ValueError."""
+        with pytest.raises(ValueError):
+            ChunkerConfig(overlap_cap_ratio=1.5)
+
+    def test_overlap_cap_ratio_one_is_valid(self):
+        """overlap_cap_ratio=1.0 should be valid (100% of chunk)."""
+        config = ChunkerConfig(overlap_cap_ratio=1.0)
+        assert config.overlap_cap_ratio == 1.0
+
+    def test_overlap_cap_ratio_preserved_in_serialization(self):
+        """overlap_cap_ratio should be preserved in to_dict/from_dict."""
+        config = ChunkerConfig(overlap_cap_ratio=0.25)
+        d = config.to_dict()
+        
+        assert "overlap_cap_ratio" in d
+        assert d["overlap_cap_ratio"] == 0.25
+        
+        restored = ChunkerConfig.from_dict(d)
+        assert restored.overlap_cap_ratio == 0.25

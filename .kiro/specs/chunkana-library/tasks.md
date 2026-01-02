@@ -327,3 +327,55 @@
 - ❌ Переименовывать модули/пакеты до прохождения baseline
 - ❌ Менять ChunkConfig на ChunkerConfig (только добавить алиас)
 
+
+
+## Additional Tasks (Post-Initial Implementation)
+
+- [x] 19. Fix overlap_cap_ratio configuration
+  - [x] 19.1 Add `overlap_cap_ratio: float = 0.35` parameter to ChunkConfig
+  - [x] 19.2 Add validation method `_validate_overlap_cap_ratio()`
+  - [x] 19.3 Update `to_dict()` and `from_dict()` to include overlap_cap_ratio
+  - [x] 19.4 Update chunker.py to use `self.config.overlap_cap_ratio` instead of constant
+  - [x] 19.5 Add unit tests for overlap_cap_ratio in test_config.py (8 tests)
+  - [x] 19.6 Add property test for custom overlap_cap_ratio in test_invariants.py
+
+- [x] 20. Port tests from dify-markdown-chunker to increase coverage
+  - [x] 20.1 Port domain properties tests (PROP-1 through PROP-9)
+    - Created tests/property/test_domain_properties.py
+    - Tests: content preservation, size bounds, monotonic ordering, no empty chunks, valid line numbers, code block integrity, table integrity, idempotence
+  - [x] 20.2 Port structural strength tests
+    - Created tests/unit/test_structural_strength.py
+    - Tests: header level prevents small flag, multiple paragraphs, sufficient text lines, meaningful content, structurally weak chunks
+  - [x] 20.3 Port preamble scenario tests
+    - Created tests/unit/test_preamble.py
+    - Tests: strategy selection, first chunk is preamble, preamble content accuracy, next_content present, documents without preamble, long preamble
+  - [x] 20.4 Port parser nested fencing tests
+    - Created tests/unit/test_parser_fencing.py
+    - Tests: basic fence detection, quadruple backticks, tilde fencing, mixed fence types, edge cases, content preservation, metadata
+  - [x] 20.5 Port strategy tests
+    - Created tests/unit/test_strategies.py
+    - Tests: strategy selector, code_aware strategy, structural strategy, list_aware strategy, fallback strategy, strategy metadata
+  - [x] 20.6 Port validator tests
+    - Created tests/unit/test_validator.py
+    - Tests: validator, validation result, chunker validation, validate_chunks function, edge cases
+
+## Test Coverage Progress
+
+| Date | Tests | Coverage |
+|------|-------|----------|
+| Initial | 111 | 59% |
+| After overlap_cap_ratio fix | 119 | 59% |
+| After test porting | 209 | 64% |
+
+## Notes
+
+- Coverage increased from 59% to 64% after porting tests
+- Main uncovered areas remain:
+  - streaming/ (0%) - not used in baseline
+  - table_grouping.py (0%) - not used in baseline
+  - compat.py (0%) - compatibility layer
+  - strategies/base.py (36%) - abstract base class
+- To reach 75-80% coverage, would need to:
+  - Add tests for streaming module
+  - Add tests for table_grouping module
+  - Add more edge case tests for strategies

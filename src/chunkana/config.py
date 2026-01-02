@@ -119,6 +119,9 @@ class ChunkConfig:
     group_related_tables: bool = False
     table_grouping_config: Optional["TableGroupingConfig"] = None
 
+    # Overlap cap ratio (limits overlap to fraction of adjacent chunk size)
+    overlap_cap_ratio: float = 0.35
+
     def __post_init__(self):
         """Validate configuration."""
         self._validate_size_params()
@@ -128,6 +131,7 @@ class ChunkConfig:
         self._validate_adaptive_sizing_params()
         self._validate_latex_params()
         self._validate_table_grouping_params()
+        self._validate_overlap_cap_ratio()
 
     def _validate_size_params(self):
         """Validate size-related parameters."""
@@ -228,6 +232,14 @@ class ChunkConfig:
         # TableGroupingConfig validates itself in __post_init__
         # Here we just ensure consistency
         pass
+
+    def _validate_overlap_cap_ratio(self):
+        """Validate overlap cap ratio parameter."""
+        if not 0 < self.overlap_cap_ratio <= 1:
+            raise ValueError(
+                f"overlap_cap_ratio must be between 0 (exclusive) and 1 (inclusive), "
+                f"got {self.overlap_cap_ratio}"
+            )
 
     def get_table_grouper(self) -> Optional["TableGrouper"]:
         """
@@ -431,6 +443,7 @@ class ChunkConfig:
             "related_block_max_gap": self.related_block_max_gap,
             "bind_output_blocks": self.bind_output_blocks,
             "preserve_before_after_pairs": self.preserve_before_after_pairs,
+            "overlap_cap_ratio": self.overlap_cap_ratio,
             "enable_overlap": self.enable_overlap,  # computed property
         }
 
@@ -475,6 +488,7 @@ class ChunkConfig:
             "related_block_max_gap",
             "bind_output_blocks",
             "preserve_before_after_pairs",
+            "overlap_cap_ratio",
         }
         config_data = {k: v for k, v in config_data.items() if k in valid_params}
 

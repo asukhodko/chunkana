@@ -418,6 +418,7 @@ class TestOverlapCapRatio:
             max_chunk_size=1000,
             min_chunk_size=100,
             overlap_size=500,  # Large overlap to test capping
+            overlap_cap_ratio=overlap_cap_ratio,
         )
         
         try:
@@ -438,6 +439,44 @@ class TestOverlapCapRatio:
                     assert actual_overlap <= max_allowed, (
                         f"Chunk {i}: overlap {actual_overlap} exceeds cap "
                         f"({overlap_cap_ratio} * {prev_chunk_size} = {max_allowed})"
+                    )
+
+    @given(markdown=simple_markdown())
+    @settings(max_examples=100)
+    def test_custom_overlap_cap_ratio(self, markdown: str):
+        """
+        Feature: chunkana-library, Property 8: Overlap Cap Ratio (custom)
+        
+        Custom overlap_cap_ratio should be respected.
+        """
+        assume(len(markdown.strip()) > 0)
+        
+        custom_ratio = 0.5  # 50% instead of default 35%
+        config = ChunkerConfig(
+            max_chunk_size=1000,
+            min_chunk_size=100,
+            overlap_size=800,  # Large overlap to test capping
+            overlap_cap_ratio=custom_ratio,
+        )
+        
+        try:
+            chunks = chunk_markdown(markdown, config)
+        except Exception:
+            return
+        
+        assume(len(chunks) > 1)
+        
+        for i, chunk in enumerate(chunks):
+            if i > 0 and "previous_content" in chunk.metadata:
+                prev_content = chunk.metadata.get("previous_content", "")
+                if prev_content:
+                    prev_chunk_size = chunks[i-1].size
+                    max_allowed = int(prev_chunk_size * custom_ratio) + 50  # tolerance
+                    actual_overlap = len(prev_content)
+                    
+                    assert actual_overlap <= max_allowed, (
+                        f"Chunk {i}: overlap {actual_overlap} exceeds custom cap "
+                        f"({custom_ratio} * {prev_chunk_size} = {max_allowed})"
                     )
 
 
