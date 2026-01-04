@@ -33,9 +33,11 @@ class HierarchicalChunkingResult:
 
     def __post_init__(self) -> None:
         """Build index for O(1) lookups."""
-        self._index = {
-            c.metadata.get("chunk_id"): c for c in self.chunks if c.metadata.get("chunk_id")
-        }
+        self._index: dict[str, Chunk] = {}
+        for c in self.chunks:
+            chunk_id = c.metadata.get("chunk_id")
+            if chunk_id is not None:
+                self._index[str(chunk_id)] = c
 
     def get_chunk(self, chunk_id: str) -> Chunk | None:
         """
@@ -64,7 +66,7 @@ class HierarchicalChunkingResult:
             return []
 
         children_ids = chunk.metadata.get("children_ids", [])
-        return [self.get_chunk(cid) for cid in children_ids if self.get_chunk(cid)]
+        return [c for cid in children_ids if (c := self.get_chunk(cid)) is not None]
 
     def get_parent(self, chunk_id: str) -> Chunk | None:
         """
@@ -195,7 +197,7 @@ class HierarchicalChunkingResult:
         """
         return [c for c in self.chunks if c.metadata.get("hierarchy_level") == level]
 
-    def to_tree_dict(self) -> dict:
+    def to_tree_dict(self) -> dict[str, object]:
         """
         Convert hierarchy to tree dictionary for serialization.
 
@@ -206,7 +208,7 @@ class HierarchicalChunkingResult:
             Nested dictionary representing tree structure
         """
 
-        def build_node(chunk_id: str) -> dict:
+        def build_node(chunk_id: str) -> dict[str, object]:
             chunk = self.get_chunk(chunk_id)
             if not chunk:
                 return {}
@@ -758,7 +760,9 @@ class HierarchyBuilder:
 
         return errors
 
-    def _traverse_sibling_chain(self, start_chunk: Chunk, chunk_map: dict[str, Chunk]) -> tuple:
+    def _traverse_sibling_chain(
+        self, start_chunk: Chunk, chunk_map: dict[str, Chunk]
+    ) -> tuple[list[str], int]:
         """
         Traverse sibling chain and validate links. Complexity: < 7.
 

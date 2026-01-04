@@ -294,7 +294,7 @@ class Chunk:
     end_line: int
     metadata: dict[str, Any] = field(default_factory=dict)
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         """Validate chunk on creation."""
         if self.start_line < 1:
             raise ValueError(f"start_line must be >= 1, got {self.start_line}")
@@ -318,12 +318,13 @@ class Chunk:
     @property
     def is_oversize(self) -> bool:
         """Whether chunk is marked as intentionally oversize."""
-        return self.metadata.get("allow_oversize", False)
+        return bool(self.metadata.get("allow_oversize", False))
 
     @property
     def strategy(self) -> str:
         """Strategy that created this chunk."""
-        return self.metadata.get("strategy", "unknown")
+        result = self.metadata.get("strategy", "unknown")
+        return str(result) if result is not None else "unknown"
 
     def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary for serialization."""

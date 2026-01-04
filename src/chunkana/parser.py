@@ -838,7 +838,15 @@ class Parser:
                 break
 
         if not items:
-            return None, start_idx
+            # Return a dummy block that will be filtered out
+            dummy_block = ListBlock(
+                items=[],
+                start_line=start_idx + 1,
+                end_line=start_idx + 1,
+                list_type=ListType.BULLET,
+                max_depth=0,
+            )
+            return dummy_block, start_idx
 
         primary_type = self._determine_primary_type(items)
         block = ListBlock(
@@ -874,7 +882,7 @@ class Parser:
         type_counts: dict[ListType, int] = {}
         for item in items:
             type_counts[item.list_type] = type_counts.get(item.list_type, 0) + 1
-        return max(type_counts, key=type_counts.get)
+        return max(type_counts.keys(), key=lambda k: type_counts[k])
 
     def get_line_at_position(self, md_text: str, pos: int) -> int:
         """

@@ -25,7 +25,7 @@ class ValidationResult:
         return cls(is_valid=True, errors=[], warnings=[])
 
     @classmethod
-    def failure(cls, errors: list[str], warnings: list[str] = None) -> "ValidationResult":
+    def failure(cls, errors: list[str], warnings: list[str] | None = None) -> "ValidationResult":
         return cls(is_valid=False, errors=errors, warnings=warnings or [])
 
 

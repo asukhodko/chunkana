@@ -12,7 +12,7 @@ if TYPE_CHECKING:
     from ..types import Chunk
 
 
-def render_json(chunks: list["Chunk"]) -> list[dict]:
+def render_json(chunks: list["Chunk"]) -> list[dict[str, object]]:
     """
     Convert chunks to list of dictionaries.
 

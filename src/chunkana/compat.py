@@ -7,7 +7,6 @@ Provides backward-compatible API for existing code using v1 interfaces.
 """
 
 import warnings
-from typing import Any
 
 from .chunker import MarkdownChunker
 from .config import ChunkConfig
@@ -22,7 +21,7 @@ class LegacyChunkConfig:
     """
 
     @staticmethod
-    def create(**kwargs) -> ChunkConfig:
+    def create(**kwargs: object) -> ChunkConfig:
         """Create ChunkConfig from legacy parameters."""
         return ChunkConfig.from_legacy(**kwargs)
 
@@ -34,7 +33,7 @@ class LegacyMarkdownChunker:
     Provides v1-compatible interface using v2 implementation.
     """
 
-    def __init__(self, config: ChunkConfig | None = None, **legacy_kwargs):
+    def __init__(self, config: ChunkConfig | None = None, **legacy_kwargs: object):
         """
         Initialize with optional legacy parameters.
 
@@ -53,7 +52,7 @@ class LegacyMarkdownChunker:
 
         self._chunker = MarkdownChunker(config)
 
-    def chunk(self, text: str, include_analysis: bool = False) -> Any:
+    def chunk(self, text: str, include_analysis: bool = False) -> list[Chunk] | ChunkingResult:
         """
         Chunk markdown text.
 
@@ -86,7 +85,10 @@ class LegacyMarkdownChunker:
         Returns:
             ChunkingResult with chunks and analysis
         """
-        return self.chunk(text, include_analysis=True)
+        result = self.chunk(text, include_analysis=True)
+        # Type narrowing: when include_analysis=True, result is ChunkingResult
+        assert isinstance(result, ChunkingResult)
+        return result
 
 
 # Convenience functions for backward compatibility

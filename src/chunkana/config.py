@@ -6,7 +6,7 @@ Only 8 core parameters instead of 32.
 
 import warnings
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING, Any, Optional
 
 from .adaptive_sizing import AdaptiveSizeConfig
 
@@ -122,7 +122,7 @@ class ChunkConfig:
     # Overlap cap ratio (limits overlap to fraction of adjacent chunk size)
     overlap_cap_ratio: float = 0.35
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         """Validate configuration."""
         self._validate_size_params()
         self._validate_threshold_params()
@@ -133,7 +133,7 @@ class ChunkConfig:
         self._validate_table_grouping_params()
         self._validate_overlap_cap_ratio()
 
-    def _validate_size_params(self):
+    def _validate_size_params(self) -> None:
         """Validate size-related parameters."""
         if self.max_chunk_size <= 0:
             raise ValueError(f"max_chunk_size must be positive, got {self.max_chunk_size}")
@@ -154,7 +154,7 @@ class ChunkConfig:
                 f"max_chunk_size ({self.max_chunk_size})"
             )
 
-    def _validate_threshold_params(self):
+    def _validate_threshold_params(self) -> None:
         """Validate threshold parameters."""
         if not 0 <= self.code_threshold <= 1:
             raise ValueError(f"code_threshold must be between 0 and 1, got {self.code_threshold}")
@@ -170,7 +170,7 @@ class ChunkConfig:
         if self.list_count_threshold < 1:
             raise ValueError(f"list_count_threshold must be >= 1, got {self.list_count_threshold}")
 
-    def _validate_strategy_override(self):
+    def _validate_strategy_override(self) -> None:
         """Validate strategy override parameter."""
         if self.strategy_override is not None:
             valid_strategies = {"code_aware", "list_aware", "structural", "fallback"}
@@ -180,7 +180,7 @@ class ChunkConfig:
                     f"{valid_strategies}, got {self.strategy_override}"
                 )
 
-    def _validate_code_context_params(self):
+    def _validate_code_context_params(self) -> None:
         """Validate code-context binding parameters."""
         if self.max_context_chars_before < 0:
             raise ValueError(
@@ -198,26 +198,26 @@ class ChunkConfig:
                 f"related_block_max_gap must be >= 1, got {self.related_block_max_gap}"
             )
 
-    def _validate_adaptive_sizing_params(self):
+    def _validate_adaptive_sizing_params(self) -> None:
         """Validate adaptive sizing parameters."""
         if self.use_adaptive_sizing and self.adaptive_config is None:
             # Auto-create default config if adaptive sizing enabled
             self.adaptive_config = AdaptiveSizeConfig()
 
-    def _validate_latex_params(self):
+    def _validate_latex_params(self) -> None:
         """Validate LaTeX formula handling parameters."""
         if self.latex_max_context_chars < 0:
             raise ValueError(
                 f"latex_max_context_chars must be non-negative, got {self.latex_max_context_chars}"
             )
 
-    def _validate_table_grouping_params(self):
+    def _validate_table_grouping_params(self) -> None:
         """Validate table grouping parameters."""
         # TableGroupingConfig validates itself in __post_init__
         # Here we just ensure consistency
         pass
 
-    def _validate_overlap_cap_ratio(self):
+    def _validate_overlap_cap_ratio(self) -> None:
         """Validate overlap cap ratio parameter."""
         if not 0 < self.overlap_cap_ratio <= 1:
             raise ValueError(
@@ -249,7 +249,7 @@ class ChunkConfig:
         return self.overlap_size > 0
 
     @classmethod
-    def from_legacy(cls, **kwargs) -> "ChunkConfig":
+    def from_legacy(cls, **kwargs: object) -> "ChunkConfig":
         """
         Create config from legacy parameters with deprecation warnings.
 
@@ -281,7 +281,7 @@ class ChunkConfig:
             "enable_fallback_strategy",  # Always enabled
         }
 
-        new_kwargs = {}
+        new_kwargs: dict[str, Any] = {}
 
         for key, value in kwargs.items():
             if key in removed_params:
@@ -403,7 +403,7 @@ class ChunkConfig:
             ),
         )
 
-    def to_dict(self) -> dict:
+    def to_dict(self) -> dict[str, object]:
         """
         Serialize config to dictionary.
 
@@ -411,7 +411,7 @@ class ChunkConfig:
             Dictionary with all config parameters including computed properties.
             Includes both plugin parity fields and Chunkana extension fields.
         """
-        result = {
+        result: dict[str, object] = {
             # Plugin parity fields (from plugin_config_keys.json)
             "max_chunk_size": self.max_chunk_size,
             "min_chunk_size": self.min_chunk_size,
@@ -447,7 +447,7 @@ class ChunkConfig:
         return result
 
     @classmethod
-    def from_dict(cls, data: dict) -> "ChunkConfig":
+    def from_dict(cls, data: dict[str, Any]) -> "ChunkConfig":
         """
         Create config from dictionary.
 

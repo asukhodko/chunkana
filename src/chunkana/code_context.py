@@ -51,10 +51,10 @@ class CodeContext:
     role: CodeBlockRole
     explanation_before: str | None = None
     explanation_after: str | None = None
-    related_blocks: list[FencedBlock] = None
+    related_blocks: list[FencedBlock] | None = None
     output_block: FencedBlock | None = None
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         """Initialize default values for mutable fields."""
         if self.related_blocks is None:
             self.related_blocks = []

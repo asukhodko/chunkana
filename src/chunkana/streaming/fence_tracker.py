@@ -14,7 +14,7 @@ class FenceTracker:
     Maintains fence stack to detect when inside code blocks.
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Initialize fence tracker."""
         self._fence_stack: list[tuple[str, int]] = []
         self._fence_pattern = re.compile(r"^(\s*)(`{3,}|~{3,})(\w*)\s*$")

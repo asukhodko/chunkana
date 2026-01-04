@@ -15,14 +15,14 @@ from __future__ import annotations
 import io
 import re
 from collections.abc import Iterator
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from .adaptive_sizing import AdaptiveSizeCalculator
 from .config import ChunkConfig
 from .hierarchy import HierarchicalChunkingResult, HierarchyBuilder
 from .parser import get_parser
 from .strategies import StrategySelector
-from .types import Chunk, ChunkingMetrics
+from .types import Chunk, ChunkingMetrics, ContentAnalysis
 
 if TYPE_CHECKING:
     from .streaming import StreamingConfig
@@ -163,7 +163,7 @@ class MarkdownChunker:
 
         return chunks
 
-    def chunk_with_metrics(self, md_text: str) -> tuple:
+    def chunk_with_metrics(self, md_text: str) -> tuple[list[Chunk], ChunkingMetrics]:
         """
         Chunk and return metrics.
 
@@ -176,7 +176,7 @@ class MarkdownChunker:
         )
         return chunks, metrics
 
-    def chunk_with_analysis(self, md_text: str) -> tuple:
+    def chunk_with_analysis(self, md_text: str) -> tuple[list[Chunk], str, ContentAnalysis | None]:
         """
         Chunk and return analysis info.
 
@@ -595,18 +595,18 @@ class MarkdownChunker:
             return False
 
         # Condition 3: Current chunk must be header/section type, not preamble
-        current_type = current.metadata.get("content_type", "")
+        current_type = str(current.metadata.get("content_type", ""))
         if current_type == "preamble":
             return False
 
         # Condition 5: Next chunk must not be preamble
-        next_type = next_chunk.metadata.get("content_type", "")
+        next_type = str(next_chunk.metadata.get("content_type", ""))
         if next_type == "preamble":
             return False
 
         # Condition 4: Check if next chunk is in same section or is child section
-        current_path = current.metadata.get("header_path", "")
-        next_path = next_chunk.metadata.get("header_path", "")
+        current_path = str(current.metadata.get("header_path", ""))
+        next_path = str(next_chunk.metadata.get("header_path", ""))
 
         # Handle empty paths
         if not current_path or not next_path:
@@ -700,7 +700,9 @@ class MarkdownChunker:
         # Only merge if both are preamble or both are not preamble
         return chunk1_is_preamble == chunk2_is_preamble
 
-    def _create_merged_chunk(self, chunk1: Chunk, chunk2: Chunk, metadata_base: dict) -> Chunk:
+    def _create_merged_chunk(
+        self, chunk1: Chunk, chunk2: Chunk, metadata_base: dict[str, Any]
+    ) -> Chunk:
         """Create a merged chunk from two chunks."""
         merged_content = chunk1.content + "\n\n" + chunk2.content
         merged_chunk = Chunk(
@@ -774,8 +776,8 @@ class MarkdownChunker:
         Returns:
             True if chunks are in same logical section
         """
-        path1 = chunk1.metadata.get("header_path", "")
-        path2 = chunk2.metadata.get("header_path", "")
+        path1 = str(chunk1.metadata.get("header_path", ""))
+        path2 = str(chunk2.metadata.get("header_path", ""))
 
         # Preamble chunks are in their own section
         if path1 == "/__preamble__" or path2 == "/__preamble__":
@@ -827,8 +829,8 @@ class MarkdownChunker:
             return "text"
 
     def chunk_simple(
-        self, text: str, config: dict | None = None, strategy: str | None = None
-    ) -> dict:
+        self, text: str, config: dict[str, Any] | None = None, strategy: str | None = None
+    ) -> dict[str, object]:
         """
         Simple chunking method that returns dictionary format.
 

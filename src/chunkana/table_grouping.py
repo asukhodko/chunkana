@@ -6,6 +6,7 @@ to improve retrieval quality for table-heavy documents.
 """
 
 from dataclasses import dataclass
+from typing import Any
 
 from .types import Header, TableBlock
 
@@ -31,7 +32,7 @@ class TableGroupingConfig:
     max_group_size: int = 5000
     require_same_section: bool = True
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         """Validate configuration parameters."""
         if self.max_distance_lines < 0:
             raise ValueError(
@@ -44,7 +45,7 @@ class TableGroupingConfig:
         if self.max_group_size < 100:
             raise ValueError(f"max_group_size must be >= 100, got {self.max_group_size}")
 
-    def to_dict(self) -> dict:
+    def to_dict(self) -> dict[str, object]:
         """Serialize config to dictionary."""
         return {
             "max_distance_lines": self.max_distance_lines,
@@ -54,9 +55,14 @@ class TableGroupingConfig:
         }
 
     @classmethod
-    def from_dict(cls, data: dict) -> "TableGroupingConfig":
+    def from_dict(cls, data: dict[str, Any]) -> "TableGroupingConfig":
         """Create config from dictionary."""
-        return cls(**data)
+        return cls(
+            max_distance_lines=int(data.get("max_distance_lines", 10)),
+            max_grouped_tables=int(data.get("max_grouped_tables", 5)),
+            max_group_size=int(data.get("max_group_size", 5000)),
+            require_same_section=bool(data.get("require_same_section", True)),
+        )
 
 
 @dataclass

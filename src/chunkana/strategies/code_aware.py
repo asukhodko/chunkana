@@ -224,9 +224,9 @@ class CodeAwareStrategy(BaseStrategy):
         self,
         code_contexts: list[CodeContext],
         context_groups: list[list[CodeContext]],
-    ) -> dict:
+    ) -> dict[int, list[CodeContext]]:
         """Build mapping from context index to group."""
-        context_to_group = {}
+        context_to_group: dict[int, list[CodeContext]] = {}
         for group in context_groups:
             for ctx in group:
                 idx = code_contexts.index(ctx)
@@ -240,7 +240,7 @@ class CodeAwareStrategy(BaseStrategy):
         analysis: ContentAnalysis,
         atomic_ranges: list[tuple[int, int, str]],
         code_contexts: list[CodeContext],
-        context_to_group: dict,
+        context_to_group: dict[int, list[CodeContext]],
         config: ChunkConfig,
     ) -> list[Chunk]:
         """Process atomic blocks and create chunks with context binding."""
@@ -332,7 +332,7 @@ class CodeAwareStrategy(BaseStrategy):
         block_start: int,
         block_end: int,
         code_contexts: list[CodeContext],
-        context_to_group: dict,
+        context_to_group: dict[int, list[CodeContext]],
         processed_blocks: set[int],
         config: ChunkConfig,
     ) -> tuple[list[Chunk], int]:
@@ -579,9 +579,9 @@ class CodeAwareStrategy(BaseStrategy):
                 return True
 
         # Check if blocks are in each other's related_blocks list
-        if ctx2.code_block in ctx1.related_blocks:
+        if ctx1.related_blocks and ctx2.code_block in ctx1.related_blocks:
             return True
-        return ctx1.code_block in ctx2.related_blocks
+        return bool(ctx2.related_blocks and ctx1.code_block in ctx2.related_blocks)
 
     def _find_code_block_index(
         self, code_blocks: list[FencedBlock], start_line: int, end_line: int
@@ -635,8 +635,9 @@ class CodeAwareStrategy(BaseStrategy):
 
         # Add context metadata
         chunk.metadata["code_role"] = context.role.value
-        chunk.metadata["has_related_code"] = len(context.related_blocks) > 0
-        chunk.metadata["related_code_count"] = len(context.related_blocks)
+        related_blocks = context.related_blocks or []
+        chunk.metadata["has_related_code"] = len(related_blocks) > 0
+        chunk.metadata["related_code_count"] = len(related_blocks)
         chunk.metadata["explanation_bound"] = bool(
             context.explanation_before or context.explanation_after
         )

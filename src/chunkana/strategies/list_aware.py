@@ -8,7 +8,7 @@ Preserves list hierarchies and binds context paragraphs.
 import re
 
 from ..config import ChunkConfig
-from ..types import Chunk, ContentAnalysis, ListBlock, ListItem, ListType
+from ..types import Chunk, ContentAnalysis, Header, ListBlock, ListItem, ListType
 from .base import BaseStrategy
 
 
@@ -111,14 +111,14 @@ class ListAwareStrategy(BaseStrategy):
     def _process_all_list_blocks(
         self,
         lines: list[str],
-        list_blocks: list,
-        headers: list,
+        list_blocks: list[ListBlock],
+        headers: list[Header],
         config: ChunkConfig,
     ) -> list[Chunk]:
         """Process all list blocks and text between them."""
         chunks: list[Chunk] = []
         current_line = 1
-        processed_blocks = set()  # Track processed blocks to prevent duplication
+        processed_blocks: set[int] = set()  # Track processed blocks to prevent duplication
 
         for block in list_blocks:
             # Skip if this block was already processed (e.g., with introduction)
@@ -144,8 +144,8 @@ class ListAwareStrategy(BaseStrategy):
         self,
         chunks: list[Chunk],
         lines: list[str],
-        list_blocks: list,
-        headers: list,
+        list_blocks: list[ListBlock],
+        headers: list[Header],
         config: ChunkConfig,
     ) -> list[Chunk]:
         """Process any remaining text after the last list block."""
@@ -174,7 +174,7 @@ class ListAwareStrategy(BaseStrategy):
         current_line: int,
         block: ListBlock,
         config: ChunkConfig,
-        headers: list,
+        headers: list[Header],
     ) -> tuple[bool, list[Chunk], int]:
         """Process text before a list block.
 
@@ -223,7 +223,7 @@ class ListAwareStrategy(BaseStrategy):
         lines: list[str],
         block: ListBlock,
         config: ChunkConfig,
-        headers: list,
+        headers: list[Header],
     ) -> tuple[list[Chunk], int]:
         """Process a list block."""
         list_content = self._reconstruct_list_block(block, lines)
@@ -329,7 +329,7 @@ class ListAwareStrategy(BaseStrategy):
         """
         chunks: list[Chunk] = []
         current_items: list[ListItem] = []
-        current_start_line = None
+        current_start_line: int | None = None
 
         for item in block.items:
             # Start new group at top-level items
@@ -338,6 +338,9 @@ class ListAwareStrategy(BaseStrategy):
                 group_text, actual_end_line = self._reconstruct_item_group(
                     current_items, lines, block
                 )
+
+                if current_start_line is None:
+                    current_start_line = current_items[0].line_number
 
                 if len(group_text) <= config.max_chunk_size:
                     chunk = self._create_list_chunk(
@@ -372,6 +375,9 @@ class ListAwareStrategy(BaseStrategy):
         # Handle last group
         if current_items:
             group_text, actual_end_line = self._reconstruct_item_group(current_items, lines, block)
+
+            if current_start_line is None:
+                current_start_line = current_items[0].line_number
 
             if len(group_text) <= config.max_chunk_size:
                 chunk = self._create_list_chunk(
@@ -493,7 +499,7 @@ class ListAwareStrategy(BaseStrategy):
             header_path="",  # Will be filled by _add_header_path_to_chunk
         )
 
-    def _add_header_path_to_chunk(self, chunk: Chunk, headers: list, start_line: int) -> None:
+    def _add_header_path_to_chunk(self, chunk: Chunk, headers: list[Header], start_line: int) -> None:
         """Add header_path metadata to a chunk.
 
         Builds header hierarchy path similar to structural strategy.
@@ -505,7 +511,7 @@ class ListAwareStrategy(BaseStrategy):
             start_line: Starting line of the chunk
         """
         # Build header stack from headers BEFORE chunk start
-        header_stack: list = []
+        header_stack: list[Header] = []
 
         for header in headers:
             # Only consider headers BEFORE chunk start

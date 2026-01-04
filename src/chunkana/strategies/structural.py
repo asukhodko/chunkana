@@ -355,7 +355,7 @@ class StructuralStrategy(BaseStrategy):
         root_section_text = header_stack[-1].text if header_stack else None
 
         # Also exclude the first header if it was added to path from this chunk
-        excluded_texts = set()
+        excluded_texts: set[str] = set()
         if root_section_text:
             excluded_texts.add(root_section_text)
         if first_header_in_path:
@@ -365,7 +365,7 @@ class StructuralStrategy(BaseStrategy):
         chunk_headers = self._find_headers_in_content(chunk_content)
 
         section_tags: list[str] = []
-        seen_texts: set = set()
+        seen_texts: set[str] = set()
 
         for level, text in chunk_headers:
             # Skip if already added (deduplication)

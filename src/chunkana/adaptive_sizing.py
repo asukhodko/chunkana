@@ -6,6 +6,7 @@ content characteristics like code ratio, table presence, and text complexity.
 """
 
 from dataclasses import dataclass
+from typing import Any
 
 from .types import ContentAnalysis
 
@@ -33,7 +34,7 @@ class AdaptiveSizeConfig:
     list_weight: float = 0.2
     sentence_length_weight: float = 0.1
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         """Validate configuration parameters."""
         if self.base_size <= 0:
             raise ValueError(f"base_size must be positive, got {self.base_size}")
@@ -73,7 +74,7 @@ class AdaptiveSizeConfig:
                 f"list={self.list_weight}, sentence={self.sentence_length_weight}"
             )
 
-    def to_dict(self) -> dict:
+    def to_dict(self) -> dict[str, object]:
         """Serialize config to dictionary."""
         return {
             "base_size": self.base_size,
@@ -86,9 +87,17 @@ class AdaptiveSizeConfig:
         }
 
     @classmethod
-    def from_dict(cls, data: dict) -> "AdaptiveSizeConfig":
+    def from_dict(cls, data: dict[str, Any]) -> "AdaptiveSizeConfig":
         """Create config from dictionary."""
-        return cls(**data)
+        return cls(
+            base_size=int(data.get("base_size", 1500)),
+            min_scale=float(data.get("min_scale", 0.5)),
+            max_scale=float(data.get("max_scale", 1.5)),
+            code_weight=float(data.get("code_weight", 0.4)),
+            table_weight=float(data.get("table_weight", 0.3)),
+            list_weight=float(data.get("list_weight", 0.2)),
+            sentence_length_weight=float(data.get("sentence_length_weight", 0.1)),
+        )
 
 
 class AdaptiveSizeCalculator:

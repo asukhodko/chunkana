@@ -61,8 +61,10 @@ def analyze_markdown(
         >>> analysis = analyze_markdown(text)
         >>> print(f"Code ratio: {analysis.code_ratio}")
     """
-    chunker = MarkdownChunker(config or ChunkerConfig.default())
-    return chunker.analyze(text)
+    from .parser import get_parser
+
+    parser = get_parser()
+    return parser.analyze(text)
 
 
 def chunk_with_analysis(
@@ -92,7 +94,13 @@ def chunk_with_analysis(
         >>> print(f"Chunks: {len(result.chunks)}")
     """
     chunker = MarkdownChunker(config or ChunkerConfig.default())
-    return chunker.chunk_with_analysis(text)
+    chunks, strategy, analysis = chunker.chunk_with_analysis(text)
+    return ChunkingResult(
+        chunks=chunks,
+        strategy_used=strategy,
+        total_chars=analysis.total_chars if analysis else 0,
+        total_lines=analysis.total_lines if analysis else 0,
+    )
 
 
 def chunk_with_metrics(

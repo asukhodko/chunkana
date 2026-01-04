@@ -28,7 +28,7 @@ class StrategySelector:
     4. FallbackStrategy - always works (universal fallback)
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.strategies: list[BaseStrategy] = [
             CodeAwareStrategy(),
             ListAwareStrategy(),

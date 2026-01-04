@@ -64,7 +64,9 @@ class BaseStrategy(ABC):
         """
         pass
 
-    def _create_chunk(self, content: str, start_line: int, end_line: int, **metadata) -> Chunk:
+    def _create_chunk(
+        self, content: str, start_line: int, end_line: int, **metadata: object
+    ) -> Chunk:
         """
         Create a chunk with strategy metadata.
 
