@@ -48,7 +48,7 @@ def markdown_with_deep_headers(draw):
     """Generate markdown with deep header nesting."""
     # Use draw to make this a valid composite strategy
     _ = draw(st.just(None))
-    
+
     parts = []
 
     # H1

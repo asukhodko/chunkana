@@ -65,7 +65,7 @@ test-cov:
 # Run linter
 lint:
 	@echo "Running linter..."
-	$(VENV_BIN)/ruff check src/chunkana
+	$(VENV_BIN)/ruff check .
 
 # Run type checker
 typecheck:
@@ -75,8 +75,8 @@ typecheck:
 # Format code
 format:
 	@echo "Formatting code..."
-	$(VENV_BIN)/ruff format src/chunkana tests/
-	$(VENV_BIN)/ruff check --fix src/chunkana
+	$(VENV_BIN)/ruff format .
+	$(VENV_BIN)/ruff check --fix .
 
 # Run all checks
 check: lint typecheck test

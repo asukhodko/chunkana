@@ -1,6 +1,8 @@
 # Virtual environment
 venv/
 .venv/
+.venv_dist/
+.venv_testpypi/
 env/
 
 # Python
