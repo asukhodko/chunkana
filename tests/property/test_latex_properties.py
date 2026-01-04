@@ -8,10 +8,10 @@ Tests that LaTeX formulas (display math and environments) are preserved
 as atomic blocks and never split across chunks.
 """
 
-from hypothesis import given, settings, strategies as st, assume
+from hypothesis import assume, given, settings
+from hypothesis import strategies as st
 
-from chunkana import chunk_markdown, ChunkerConfig
-
+from chunkana import ChunkerConfig, chunk_markdown
 
 # =============================================================================
 # Generators for LaTeX content
@@ -51,8 +51,7 @@ def markdown_with_display_math(draw):
                 min_size=20,
                 max_size=100,
                 alphabet=st.characters(
-                    whitelist_categories=("L", "N", "P", "Z"),
-                    whitelist_characters=" \n.,!?"
+                    whitelist_categories=("L", "N", "P", "Z"), whitelist_characters=" \n.,!?"
                 ),
             ).filter(lambda x: x.strip() and "$" not in x)
         )
@@ -68,8 +67,7 @@ def markdown_with_display_math(draw):
                 min_size=20,
                 max_size=100,
                 alphabet=st.characters(
-                    whitelist_categories=("L", "N", "P", "Z"),
-                    whitelist_characters=" \n.,!?"
+                    whitelist_categories=("L", "N", "P", "Z"), whitelist_characters=" \n.,!?"
                 ),
             ).filter(lambda x: x.strip() and "$" not in x)
         )
@@ -96,8 +94,7 @@ def markdown_with_latex_environments(draw):
                 min_size=20,
                 max_size=100,
                 alphabet=st.characters(
-                    whitelist_categories=("L", "N", "P", "Z"),
-                    whitelist_characters=" \n.,!?"
+                    whitelist_categories=("L", "N", "P", "Z"), whitelist_characters=" \n.,!?"
                 ),
             ).filter(lambda x: x.strip() and "\\" not in x)
         )
@@ -114,8 +111,7 @@ def markdown_with_latex_environments(draw):
                 min_size=20,
                 max_size=100,
                 alphabet=st.characters(
-                    whitelist_categories=("L", "N", "P", "Z"),
-                    whitelist_characters=" \n.,!?"
+                    whitelist_categories=("L", "N", "P", "Z"), whitelist_characters=" \n.,!?"
                 ),
             ).filter(lambda x: x.strip() and "\\" not in x)
         )
@@ -330,8 +326,7 @@ class TestLatexContentPreservation:
 
         # Should have same number of delimiters (formulas preserved)
         assert combined_count >= original_count - 2, (
-            f"LaTeX formulas lost: original had {original_count} $$, "
-            f"combined has {combined_count}"
+            f"LaTeX formulas lost: original had {original_count} $$, combined has {combined_count}"
         )
 
     @given(markdown=markdown_with_latex_environments())
@@ -492,4 +487,5 @@ More text.
 
 if __name__ == "__main__":
     import pytest
+
     pytest.main([__file__, "-v"])

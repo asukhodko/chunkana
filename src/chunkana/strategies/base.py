@@ -194,9 +194,9 @@ class BaseStrategy(ABC):
 
         # Add LaTeX blocks in range (only if configured)
         for latex_block in analysis.latex_blocks:
-            if (
-                start_line <= latex_block.start_line <= end_line
-                and latex_block.latex_type in (LatexType.DISPLAY, LatexType.ENVIRONMENT)
+            if start_line <= latex_block.start_line <= end_line and latex_block.latex_type in (
+                LatexType.DISPLAY,
+                LatexType.ENVIRONMENT,
             ):
                 atomic_ranges.append((latex_block.start_line, latex_block.end_line, "latex"))
 

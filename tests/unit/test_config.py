@@ -7,7 +7,7 @@ Validates: Requirements 2.7
 
 import pytest
 
-from chunkana import ChunkerConfig, ChunkConfig
+from chunkana import ChunkConfig, ChunkerConfig
 
 
 class TestConfigValidation:
@@ -137,7 +137,7 @@ class TestConfigAlias:
         config1 = ChunkerConfig(max_chunk_size=1000)
         config2 = ChunkConfig(max_chunk_size=1000)
 
-        assert type(config1) == type(config2)
+        assert type(config1) is type(config2)
         assert config1.max_chunk_size == config2.max_chunk_size
 
 

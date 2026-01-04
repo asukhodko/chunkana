@@ -4,10 +4,8 @@ Unit tests for chunk validation.
 Tests the validator module to increase coverage.
 """
 
-import pytest
-
-from chunkana import ChunkConfig, MarkdownChunker, Chunk
-from chunkana.validator import Validator, ValidationResult, validate_chunks
+from chunkana import Chunk, ChunkConfig, MarkdownChunker
+from chunkana.validator import ValidationResult, Validator, validate_chunks
 
 
 class TestValidator:
@@ -200,7 +198,7 @@ Content.
         chunks = [Chunk(content="Hello", start_line=1, end_line=1, metadata={})]
 
         # Non-strict: warning only
-        result_normal = validate_chunks(chunks, md_text, strict=False)
+        validate_chunks(chunks, md_text, strict=False)
 
         # Strict: warning becomes error
         result_strict = validate_chunks(chunks, md_text, strict=True)

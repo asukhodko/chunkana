@@ -20,7 +20,7 @@ Chunkana uses `ChunkerConfig` (alias: `ChunkConfig`) to control chunking behavio
 | `structure_threshold` | int | 3 | Minimum headers for Structural strategy |
 | `list_ratio_threshold` | float | 0.4 | List content ratio for ListAware strategy |
 | `list_count_threshold` | int | 5 | Minimum lists for ListAware strategy |
-| `strategy_override` | str | None | Force specific strategy: "code_aware", "list_aware", "structural", "fallback" |
+| `strategy_override` | str\|None | None | Force specific strategy: "code_aware", "list_aware", "structural", "fallback" |
 
 ## Code-Context Binding
 
@@ -42,13 +42,59 @@ These parameters control how code blocks are bound to surrounding explanations:
 | `use_adaptive_sizing` | bool | False | Enable adaptive chunk sizing |
 | `adaptive_config` | AdaptiveSizeConfig | None | Adaptive sizing configuration |
 
+### AdaptiveSizeConfig
+
+```python
+from chunkana.adaptive_sizing import AdaptiveSizeConfig
+
+adaptive_config = AdaptiveSizeConfig(
+    base_size=1500,       # Base chunk size
+    code_weight=0.4,      # Weight for code content
+    min_size=500,         # Minimum adaptive size
+    max_size=8000,        # Maximum adaptive size
+)
+```
+
+## Table Grouping
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `group_related_tables` | bool | False | Group related tables together |
+| `table_grouping_config` | TableGroupingConfig | None | Table grouping configuration |
+
+### TableGroupingConfig
+
+```python
+from chunkana.table_grouping import TableGroupingConfig
+
+table_config = TableGroupingConfig(
+    max_distance_lines=10,      # Max lines between related tables
+    require_same_section=True,  # Tables must be in same section
+)
+```
+
 ## Overlap Behavior
 
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
+| `overlap_size` | int | 200 | Characters to overlap between chunks |
 | `overlap_cap_ratio` | float | 0.35 | Max overlap as fraction of chunk size |
 
 The overlap is stored in metadata (`previous_content`, `next_content`), not embedded in `chunk.content`.
+
+## LaTeX Handling
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `preserve_latex_blocks` | bool | True | Keep LaTeX blocks intact |
+
+When enabled, LaTeX blocks (`$$...$$`, `\[...\]`, `\begin{...}...\end{...}`) are treated as atomic units.
+
+## Computed Fields
+
+| Field | Description |
+|-------|-------------|
+| `enable_overlap` | Computed as `overlap_size > 0` |
 
 ## Factory Methods
 
@@ -71,6 +117,8 @@ config_dict = config.to_dict()
 # Restore config
 config = ChunkerConfig.from_dict(config_dict)
 ```
+
+Round-trip is guaranteed: `ChunkerConfig.from_dict(config.to_dict()) == config`
 
 ## Example Configurations
 
@@ -107,3 +155,17 @@ config = ChunkerConfig(
     list_count_threshold=3,
 )
 ```
+
+### Scientific Documents (LaTeX)
+
+```python
+config = ChunkerConfig(
+    max_chunk_size=4096,
+    preserve_latex_blocks=True,
+    preserve_atomic_blocks=True,
+)
+```
+
+## Plugin Compatibility
+
+All 17 fields from dify-markdown-chunker's `ChunkConfig` are supported. See [Parity Matrix](migration/parity_matrix.md) for details.

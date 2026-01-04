@@ -11,7 +11,7 @@ from pathlib import Path
 import pytest
 
 from chunkana import ChunkConfig
-from chunkana.streaming import StreamingConfig, StreamingChunker
+from chunkana.streaming import StreamingChunker, StreamingConfig
 
 
 class TestStreamingConfig:
@@ -143,7 +143,7 @@ More text.
         chunks = list(chunker.chunk_stream(stream))
 
         # Should have chunks from multiple windows
-        window_indices = [c.metadata.get("stream_window_index", 0) for c in chunks]
+        [c.metadata.get("stream_window_index", 0) for c in chunks]
         # At least some chunks should exist
         assert len(chunks) > 0
 
@@ -224,7 +224,7 @@ class TestBufferManager:
         windows = list(manager.read_windows(stream))
 
         # Check overlap in subsequent windows
-        for i, (buffer, overlap, _) in enumerate(windows):
+        for i, (_buffer, overlap, _) in enumerate(windows):
             if i > 0:
                 # Overlap should be from previous buffer
                 assert len(overlap) <= config.overlap_lines
@@ -235,8 +235,8 @@ class TestSplitDetector:
 
     def test_find_split_point_at_header(self):
         """Test finding split point before header."""
-        from chunkana.streaming.split_detector import SplitDetector
         from chunkana.streaming.fence_tracker import FenceTracker
+        from chunkana.streaming.split_detector import SplitDetector
 
         detector = SplitDetector(threshold=0.5)
         fence_tracker = FenceTracker()
@@ -254,8 +254,8 @@ class TestSplitDetector:
 
     def test_find_split_point_at_paragraph(self):
         """Test finding split point at paragraph boundary."""
-        from chunkana.streaming.split_detector import SplitDetector
         from chunkana.streaming.fence_tracker import FenceTracker
+        from chunkana.streaming.split_detector import SplitDetector
 
         detector = SplitDetector(threshold=0.3)
         fence_tracker = FenceTracker()
@@ -272,8 +272,8 @@ class TestSplitDetector:
 
     def test_fallback_split(self):
         """Test fallback split at threshold."""
-        from chunkana.streaming.split_detector import SplitDetector
         from chunkana.streaming.fence_tracker import FenceTracker
+        from chunkana.streaming.split_detector import SplitDetector
 
         detector = SplitDetector(threshold=0.8)
         fence_tracker = FenceTracker()

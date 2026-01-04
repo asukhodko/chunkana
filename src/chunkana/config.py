@@ -409,8 +409,10 @@ class ChunkConfig:
 
         Returns:
             Dictionary with all config parameters including computed properties.
+            Includes both plugin parity fields and Chunkana extension fields.
         """
-        return {
+        result = {
+            # Plugin parity fields (from plugin_config_keys.json)
             "max_chunk_size": self.max_chunk_size,
             "min_chunk_size": self.min_chunk_size,
             "overlap_size": self.overlap_size,
@@ -427,16 +429,30 @@ class ChunkConfig:
             "related_block_max_gap": self.related_block_max_gap,
             "bind_output_blocks": self.bind_output_blocks,
             "preserve_before_after_pairs": self.preserve_before_after_pairs,
-            "overlap_cap_ratio": self.overlap_cap_ratio,
             "enable_overlap": self.enable_overlap,  # computed property
+            # Chunkana extension fields
+            "overlap_cap_ratio": self.overlap_cap_ratio,
+            "use_adaptive_sizing": self.use_adaptive_sizing,
+            "adaptive_config": (self.adaptive_config.to_dict() if self.adaptive_config else None),
+            "include_document_summary": self.include_document_summary,
+            "strip_obsidian_block_ids": self.strip_obsidian_block_ids,
+            "preserve_latex_blocks": self.preserve_latex_blocks,
+            "latex_display_only": self.latex_display_only,
+            "latex_max_context_chars": self.latex_max_context_chars,
+            "group_related_tables": self.group_related_tables,
+            "table_grouping_config": (
+                self.table_grouping_config.to_dict() if self.table_grouping_config else None
+            ),
         }
+        return result
 
     @classmethod
     def from_dict(cls, data: dict) -> "ChunkConfig":
         """
         Create config from dictionary.
 
-        Handles legacy parameters and uses defaults for missing keys.
+        Handles legacy parameters, nested configs, and uses defaults for missing keys.
+        Unknown fields are ignored for forward compatibility.
 
         Args:
             data: Dictionary with config parameters
@@ -444,6 +460,10 @@ class ChunkConfig:
         Returns:
             ChunkConfig instance
         """
+        import dataclasses
+
+        from .table_grouping import TableGroupingConfig
+
         config_data = data.copy()
 
         # Handle legacy enable_overlap parameter
@@ -454,26 +474,27 @@ class ChunkConfig:
             elif not enable:
                 config_data["overlap_size"] = 0
 
-        # Remove unknown parameters
-        valid_params = {
-            "max_chunk_size",
-            "min_chunk_size",
-            "overlap_size",
-            "preserve_atomic_blocks",
-            "extract_preamble",
-            "code_threshold",
-            "structure_threshold",
-            "list_ratio_threshold",
-            "list_count_threshold",
-            "strategy_override",
-            "enable_code_context_binding",
-            "max_context_chars_before",
-            "max_context_chars_after",
-            "related_block_max_gap",
-            "bind_output_blocks",
-            "preserve_before_after_pairs",
-            "overlap_cap_ratio",
-        }
+        # Handle nested adaptive_config
+        if (
+            "adaptive_config" in config_data
+            and config_data["adaptive_config"] is not None
+            and isinstance(config_data["adaptive_config"], dict)
+        ):
+            config_data["adaptive_config"] = AdaptiveSizeConfig.from_dict(
+                config_data["adaptive_config"]
+            )
+
+        # Handle nested table_grouping_config
+        if (
+            "table_grouping_config" in config_data
+            and config_data["table_grouping_config"] is not None
+        ) and isinstance(config_data["table_grouping_config"], dict):
+            config_data["table_grouping_config"] = TableGroupingConfig.from_dict(
+                config_data["table_grouping_config"]
+            )
+
+        # Filter to only valid parameters (ignore unknown fields for forward compatibility)
+        valid_params = {f.name for f in dataclasses.fields(cls)}
         config_data = {k: v for k, v in config_data.items() if k in valid_params}
 
         return cls(**config_data)

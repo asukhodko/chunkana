@@ -4,7 +4,6 @@ Safe split point detection for streaming processing.
 Detects optimal boundaries for splitting buffer windows.
 """
 
-
 from .fence_tracker import FenceTracker
 
 

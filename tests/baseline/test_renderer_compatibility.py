@@ -32,12 +32,13 @@ def get_fixtures():
 def load_golden_jsonl(path: Path) -> list[str]:
     """Load golden outputs from JSONL file."""
     outputs = []
-    with open(path, "r", encoding="utf-8") as f:
+    with open(path, encoding="utf-8") as f:
         for line in f:
             line = line.strip()
             if line:
                 data = json.loads(line)
-                outputs.append(data["output"])
+                # Golden files use "text" key (from plugin output)
+                outputs.append(data["text"])
     return outputs
 
 
@@ -67,7 +68,7 @@ def test_render_dify_style_compatibility(fixture_path: Path):
     )
 
     # Compare each output
-    for i, (actual, expected) in enumerate(zip(actual_outputs, expected_outputs)):
+    for i, (actual, expected) in enumerate(zip(actual_outputs, expected_outputs, strict=False)):
         # Normalize line endings
         actual_norm = actual.replace("\r\n", "\n")
         expected_norm = expected.replace("\r\n", "\n")
@@ -80,7 +81,7 @@ def test_render_dify_style_compatibility(fixture_path: Path):
             expected_lines = expected_norm.split("\n")
 
             # Find first difference
-            for j, (a_line, e_line) in enumerate(zip(actual_lines, expected_lines)):
+            for j, (a_line, e_line) in enumerate(zip(actual_lines, expected_lines, strict=False)):
                 if a_line != e_line:
                     pytest.fail(
                         f"Chunk {i}, line {j} mismatch:\n"
@@ -125,7 +126,7 @@ def test_render_no_metadata_compatibility(fixture_path: Path):
     )
 
     # Compare each output
-    for i, (actual, expected) in enumerate(zip(actual_outputs, expected_outputs)):
+    for i, (actual, expected) in enumerate(zip(actual_outputs, expected_outputs, strict=False)):
         # Normalize line endings
         actual_norm = actual.replace("\r\n", "\n")
         expected_norm = expected.replace("\r\n", "\n")

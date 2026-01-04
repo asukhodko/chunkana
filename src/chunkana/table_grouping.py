@@ -44,6 +44,20 @@ class TableGroupingConfig:
         if self.max_group_size < 100:
             raise ValueError(f"max_group_size must be >= 100, got {self.max_group_size}")
 
+    def to_dict(self) -> dict:
+        """Serialize config to dictionary."""
+        return {
+            "max_distance_lines": self.max_distance_lines,
+            "max_grouped_tables": self.max_grouped_tables,
+            "max_group_size": self.max_group_size,
+            "require_same_section": self.require_same_section,
+        }
+
+    @classmethod
+    def from_dict(cls, data: dict) -> "TableGroupingConfig":
+        """Create config from dictionary."""
+        return cls(**data)
+
 
 @dataclass
 class TableGroup:

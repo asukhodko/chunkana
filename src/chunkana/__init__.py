@@ -24,7 +24,11 @@ __version__ = "0.1.0"
 # Core API
 from .api import (
     analyze_markdown,
+    chunk_file,
+    chunk_file_streaming,
+    chunk_hierarchical,
     chunk_markdown,
+    chunk_text,
     chunk_with_analysis,
     chunk_with_metrics,
     iter_chunks,
@@ -34,6 +38,18 @@ from .api import (
 from .chunker import MarkdownChunker
 from .config import ChunkConfig, ChunkerConfig
 from .hierarchy import HierarchicalChunkingResult, HierarchyBuilder
+
+# Renderers
+from .renderers import (
+    render_dify_style,
+    render_inline_metadata,
+    render_json,
+    render_with_embedded_overlap,
+    render_with_prev_overlap,
+)
+
+# Streaming
+from .streaming import StreamingChunker, StreamingConfig
 from .types import (
     Chunk,
     ChunkingMetrics,
@@ -48,13 +64,23 @@ from .validator import ValidationResult, Validator, validate_chunks
 __all__ = [
     # Version
     "__version__",
-    # Functions
+    # Functions - Core
     "chunk_markdown",
+    "chunk_text",
+    "chunk_file",
+    "chunk_file_streaming",
+    "chunk_hierarchical",
     "analyze_markdown",
     "chunk_with_analysis",
     "chunk_with_metrics",
     "iter_chunks",
-    # Classes
+    # Functions - Renderers
+    "render_dify_style",
+    "render_with_embedded_overlap",
+    "render_with_prev_overlap",
+    "render_json",
+    "render_inline_metadata",
+    # Classes - Core
     "MarkdownChunker",
     "ChunkConfig",
     "ChunkerConfig",
@@ -63,8 +89,13 @@ __all__ = [
     "FencedBlock",
     "ChunkingResult",
     "ChunkingMetrics",
+    # Classes - Hierarchy
     "HierarchicalChunkingResult",
     "HierarchyBuilder",
+    # Classes - Streaming
+    "StreamingChunker",
+    "StreamingConfig",
+    # Classes - Validation
     "Validator",
     "ValidationResult",
     "validate_chunks",

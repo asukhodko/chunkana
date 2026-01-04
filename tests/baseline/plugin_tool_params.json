@@ -1,0 +1,54 @@
+{
+  "commit": "120d008bafd0",
+  "params": [
+    {
+      "name": "input_text",
+      "type": "string",
+      "required": true,
+      "default": null,
+      "description": "The Markdown text content to be chunked"
+    },
+    {
+      "name": "max_chunk_size",
+      "type": "number",
+      "required": false,
+      "default": 4096,
+      "description": "Maximum size of each chunk in characters (default: 4096)"
+    },
+    {
+      "name": "chunk_overlap",
+      "type": "number",
+      "required": false,
+      "default": 200,
+      "description": "Characters to overlap between chunks (default: 200, 0 to disable). With include_metadata=true, overlap is in metadata fields. With include_metadata=false, overlap is embedded in chunk text."
+    },
+    {
+      "name": "strategy",
+      "type": "select",
+      "required": false,
+      "default": "auto",
+      "description": "Strategy for chunking the document (default: auto - automatically detect best strategy based on content analysis)"
+    },
+    {
+      "name": "include_metadata",
+      "type": "boolean",
+      "required": false,
+      "default": true,
+      "description": "Embed metadata in chunk text (default: true). When enabled, chunks have <metadata> block with content_type, header_path, line numbers; overlap stays in metadata. When disabled, overlap is embedded into chunk text as: previous_content + main + next_content."
+    },
+    {
+      "name": "enable_hierarchy",
+      "type": "boolean",
+      "required": false,
+      "default": false,
+      "description": "Create parent-child relationships between chunks (default: false). When enabled, returns hierarchical structure with navigation metadata (parent_id, children_ids, level). Useful for multi-level retrieval and context navigation."
+    },
+    {
+      "name": "debug",
+      "type": "boolean",
+      "required": false,
+      "default": false,
+      "description": "Enable debug mode (default: false). When enabled with enable_hierarchy=true, includes all chunks (root, intermediate, and leaf). By default, only leaf chunks are returned. Future: will also control metadata field filtering."
+    }
+  ]
+}

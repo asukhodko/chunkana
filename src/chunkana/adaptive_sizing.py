@@ -73,6 +73,23 @@ class AdaptiveSizeConfig:
                 f"list={self.list_weight}, sentence={self.sentence_length_weight}"
             )
 
+    def to_dict(self) -> dict:
+        """Serialize config to dictionary."""
+        return {
+            "base_size": self.base_size,
+            "min_scale": self.min_scale,
+            "max_scale": self.max_scale,
+            "code_weight": self.code_weight,
+            "table_weight": self.table_weight,
+            "list_weight": self.list_weight,
+            "sentence_length_weight": self.sentence_length_weight,
+        }
+
+    @classmethod
+    def from_dict(cls, data: dict) -> "AdaptiveSizeConfig":
+        """Create config from dictionary."""
+        return cls(**data)
+
 
 class AdaptiveSizeCalculator:
     """

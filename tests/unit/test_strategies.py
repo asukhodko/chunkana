@@ -4,8 +4,6 @@ Unit tests for chunking strategies.
 Tests strategy selection and behavior to increase coverage.
 """
 
-import pytest
-
 from chunkana import ChunkConfig, MarkdownChunker
 from chunkana.parser import Parser
 from chunkana.strategies import StrategySelector

@@ -6,9 +6,11 @@ Properties 4-12: Chunking invariants
 """
 
 import re
-from hypothesis import given, settings, strategies as st, assume
 
-from chunkana import chunk_markdown, ChunkerConfig
+from hypothesis import assume, given, settings
+from hypothesis import strategies as st
+
+from chunkana import ChunkerConfig, chunk_markdown
 
 
 # Strategies for generating markdown documents
@@ -176,10 +178,7 @@ def contains_partial_table(content: str) -> bool:
                 has_separator = False
 
     # Check final state
-    if in_table and has_header and not has_separator:
-        return True
-
-    return False
+    return bool(in_table and has_header and not has_separator)
 
 
 class TestAtomicBlockIntegrity:
@@ -241,12 +240,12 @@ class TestAtomicBlockIntegrity:
         except Exception:
             return
 
-        for i, chunk in enumerate(chunks):
+        for _i, chunk in enumerate(chunks):
             # Tables should be complete or not present
             # This is a simplified check - full table validation is complex
             content = chunk.content
             if "|" in content:
-                lines_with_pipes = [l for l in content.split("\n") if "|" in l]
+                lines_with_pipes = [line for line in content.split("\n") if "|" in line]
                 if len(lines_with_pipes) >= 2:
                     # If we have table-like content, it should be valid
                     # At minimum, should have header + separator
@@ -533,13 +532,12 @@ class TestSmallChunkHandling:
             return
 
         for i, chunk in enumerate(chunks):
-            if chunk.size < config.min_chunk_size:
+            if chunk.size < config.min_chunk_size and chunk.metadata.get("small_chunk"):
                 # Small chunks should either be flagged or have a reason
                 # Note: v2 may not always flag, so we just verify consistency
-                if chunk.metadata.get("small_chunk"):
-                    assert "small_chunk_reason" in chunk.metadata, (
-                        f"Chunk {i}: small_chunk=True but no small_chunk_reason"
-                    )
+                assert "small_chunk_reason" in chunk.metadata, (
+                    f"Chunk {i}: small_chunk=True but no small_chunk_reason"
+                )
 
 
 class TestStrategySelection:
@@ -727,7 +725,7 @@ class TestHierarchyNavigation:
                 if parent:
                     assert ancestors[0].metadata.get("chunk_id") == parent.metadata.get(
                         "chunk_id"
-                    ), f"First ancestor should be immediate parent"
+                    ), "First ancestor should be immediate parent"
 
                 # Each ancestor should be parent of the next
                 for i in range(len(ancestors) - 1):

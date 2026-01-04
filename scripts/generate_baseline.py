@@ -1,245 +1,274 @@
 #!/usr/bin/env python3
-"""Generate baseline golden outputs from dify-markdown-chunker v2.
+"""
+Generate baseline golden outputs from dify-markdown-chunker plugin.
 
-This script runs the v2 chunker on fixture files and saves the outputs
-as golden files for baseline compatibility testing.
+This script generates:
+1. Canonical goldens (JSONL) - list[Chunk] serialized
+2. View-level goldens (JSONL) - rendered output as-is from plugin
+3. plugin_config_keys.json - keys from ChunkConfig.to_dict()
+4. plugin_tool_params.json - parameters from tool schema
 
 Usage:
-    python scripts/generate_baseline.py
+    python scripts/generate_baseline.py --plugin-path /path/to/dify-markdown-chunker
 
 Requirements:
-    - dify-markdown-chunker must be installed or accessible
-    - Run from chunkana root directory
+    - Plugin must be at pinned commit (see BASELINE.md)
+    - Plugin dependencies must be installed
 """
 
+import argparse
 import json
 import sys
 from pathlib import Path
 
-# Add dify-markdown-chunker to path for imports
-PLUGIN_PATH = Path(__file__).parent.parent.parent / "dify-markdown-chunker"
-sys.path.insert(0, str(PLUGIN_PATH))
 
-# Import from markdown_chunker_v2 directly (avoids dify_plugin dependency)
-from markdown_chunker_v2.chunker import MarkdownChunker
-from markdown_chunker_v2.config import ChunkConfig
-
-# Paths
-SCRIPT_DIR = Path(__file__).parent
-PROJECT_ROOT = SCRIPT_DIR.parent
-FIXTURES_DIR = PROJECT_ROOT / "tests" / "baseline" / "fixtures"
-GOLDEN_DIR = PROJECT_ROOT / "tests" / "baseline" / "golden"
-GOLDEN_DIFY_STYLE_DIR = PROJECT_ROOT / "tests" / "baseline" / "golden_dify_style"
-GOLDEN_NO_METADATA_DIR = PROJECT_ROOT / "tests" / "baseline" / "golden_no_metadata"
-
-# Default config matching v2 defaults
-DEFAULT_CONFIG = ChunkConfig(
-    max_chunk_size=4096,
-    min_chunk_size=512,
-    overlap_size=200,
-)
-
-
-def extract_chunks(result):
-    """Extract chunks from v2 result, handling different return types.
+def get_plugin_commit(plugin_path: Path) -> str:
+    """Get current git commit SHA of plugin."""
+    import subprocess
     
-    v2 may return:
-    - list[Chunk] directly
-    - object with .chunks attribute
-    - dict with 'chunks' key
-    """
-    if isinstance(result, list):
-        return result
-    if hasattr(result, 'chunks'):
-        return result.chunks
-    if isinstance(result, dict) and 'chunks' in result:
-        return result['chunks']
-    raise ValueError(f"Unknown result type: {type(result)}")
+    result = subprocess.run(
+        ["git", "rev-parse", "HEAD"],
+        cwd=plugin_path,
+        capture_output=True,
+        text=True,
+    )
+    return result.stdout.strip()[:12]
+
+
+def load_plugin_modules(plugin_path: Path):
+    """Add plugin to path and import modules."""
+    sys.path.insert(0, str(plugin_path))
+    
+    from markdown_chunker_v2 import MarkdownChunker, ChunkConfig
+    from markdown_chunker_v2.types import Chunk
+    
+    return MarkdownChunker, ChunkConfig, Chunk
+
+
+def extract_config_keys(ChunkConfig) -> list[str]:
+    """Extract keys from ChunkConfig.to_dict()."""
+    config = ChunkConfig()
+    return sorted(config.to_dict().keys())
+
+
+def extract_tool_params(plugin_path: Path) -> list[dict]:
+    """Extract parameters from tool schema YAML."""
+    import yaml
+    
+    tool_yaml = plugin_path / "tools" / "markdown_chunk_tool.yaml"
+    if not tool_yaml.exists():
+        return []
+    
+    with open(tool_yaml) as f:
+        schema = yaml.safe_load(f)
+    
+    params = []
+    for param in schema.get("parameters", []):
+        params.append({
+            "name": param.get("name"),
+            "type": param.get("type"),
+            "required": param.get("required", False),
+            "default": param.get("default"),
+            "description": param.get("human_description", {}).get("en_US", ""),
+        })
+    
+    return params
 
 
 def chunk_to_dict(chunk) -> dict:
-    """Convert chunk to dictionary for JSON serialization."""
-    if hasattr(chunk, 'to_dict'):
-        return chunk.to_dict()
+    """Convert Chunk to dict for JSONL serialization."""
     return {
         "content": chunk.content,
         "start_line": chunk.start_line,
         "end_line": chunk.end_line,
-        "metadata": chunk.metadata or {},
+        "metadata": chunk.metadata,
     }
 
 
-def format_dify_style(chunk) -> str:
-    """Format chunk as v2 include_metadata=True output."""
-    metadata = (chunk.metadata or {}).copy()
-    metadata['start_line'] = chunk.start_line
-    metadata['end_line'] = chunk.end_line
-    metadata_json = json.dumps(metadata, ensure_ascii=False, indent=2)
-    return f"<metadata>\n{metadata_json}\n</metadata>\n{chunk.content}"
+def render_dify_style(chunks: list) -> list[str]:
+    """
+    Render chunks in Dify-compatible format (include_metadata=True).
+    
+    This replicates plugin's output format exactly.
+    """
+    result = []
+    for chunk in chunks:
+        # Build metadata dict with start_line/end_line
+        output_metadata = chunk.metadata.copy()
+        output_metadata["start_line"] = chunk.start_line
+        output_metadata["end_line"] = chunk.end_line
+        
+        # JSON formatting: match plugin exactly
+        metadata_json = json.dumps(
+            output_metadata,
+            ensure_ascii=False,
+            indent=2,
+        )
+        
+        formatted = f"<metadata>\n{metadata_json}\n</metadata>\n{chunk.content}"
+        result.append(formatted)
+    
+    return result
 
 
-def format_no_metadata(chunk) -> str:
-    """Format chunk as v2 include_metadata=False output (bidirectional overlap)."""
-    metadata = chunk.metadata or {}
-    previous_content = metadata.get("previous_content", "")
-    next_content = metadata.get("next_content", "")
+def render_with_embedded_overlap(chunks: list) -> list[str]:
+    """
+    Render chunks with embedded overlap (include_metadata=False).
     
-    parts = []
-    if previous_content:
-        parts.append(previous_content)
-    parts.append(chunk.content)
-    if next_content:
-        parts.append(next_content)
+    This replicates plugin's output format exactly.
+    """
+    result = []
+    for chunk in chunks:
+        parts = []
+        
+        prev = chunk.metadata.get("previous_content", "")
+        next_ = chunk.metadata.get("next_content", "")
+        
+        if prev:
+            parts.append(prev)
+        parts.append(chunk.content)
+        if next_:
+            parts.append(next_)
+        
+        result.append("\n".join(parts))
     
-    return "\n".join(parts)
+    return result
 
 
-def generate_golden_for_fixture(fixture_path: Path, config: ChunkConfig):
-    """Generate all golden outputs for a single fixture."""
-    print(f"Processing: {fixture_path.name}")
+def generate_goldens(
+    plugin_path: Path,
+    fixtures_dir: Path,
+    output_dir: Path,
+    MarkdownChunker,
+    ChunkConfig,
+):
+    """Generate all golden outputs from fixtures."""
     
-    markdown = fixture_path.read_text(encoding="utf-8")
-    chunker = MarkdownChunker(config)
-    result = chunker.chunk(markdown)
-    chunks = extract_chunks(result)
+    canonical_dir = output_dir / "golden_canonical"
+    dify_style_dir = output_dir / "golden_dify_style"
+    no_metadata_dir = output_dir / "golden_no_metadata"
     
-    # Core golden output (canonical chunks)
-    golden_data = {
-        "fixture": fixture_path.name,
-        "config": {
-            "max_chunk_size": config.max_chunk_size,
-            "min_chunk_size": config.min_chunk_size,
-            "overlap_size": config.overlap_size,
-        },
-        "chunks": [chunk_to_dict(c) for c in chunks],
-    }
+    canonical_dir.mkdir(parents=True, exist_ok=True)
+    dify_style_dir.mkdir(parents=True, exist_ok=True)
+    no_metadata_dir.mkdir(parents=True, exist_ok=True)
     
-    golden_path = GOLDEN_DIR / f"{fixture_path.stem}.json"
-    golden_path.write_text(
-        json.dumps(golden_data, ensure_ascii=False, indent=2),
-        encoding="utf-8"
-    )
-    print(f"  -> {golden_path.name}")
+    chunker = MarkdownChunker(ChunkConfig())
     
-    # View-level: dify_style (include_metadata=True)
-    dify_style_path = GOLDEN_DIFY_STYLE_DIR / f"{fixture_path.stem}.jsonl"
-    with dify_style_path.open("w", encoding="utf-8") as f:
-        for chunk in chunks:
-            line = json.dumps({"output": format_dify_style(chunk)}, ensure_ascii=False)
-            f.write(line + "\n")
-    print(f"  -> golden_dify_style/{dify_style_path.name}")
+    fixtures = list(fixtures_dir.glob("*.md"))
+    print(f"Found {len(fixtures)} fixtures")
     
-    # View-level: no_metadata (include_metadata=False, bidirectional)
-    no_metadata_path = GOLDEN_NO_METADATA_DIR / f"{fixture_path.stem}.jsonl"
-    with no_metadata_path.open("w", encoding="utf-8") as f:
-        for chunk in chunks:
-            line = json.dumps({"output": format_no_metadata(chunk)}, ensure_ascii=False)
-            f.write(line + "\n")
-    print(f"  -> golden_no_metadata/{no_metadata_path.name}")
+    for fixture in fixtures:
+        name = fixture.stem
+        print(f"  Processing: {name}")
+        
+        text = fixture.read_text(encoding="utf-8")
+        chunks = chunker.chunk(text)
+        
+        # Canonical golden (JSONL)
+        canonical_file = canonical_dir / f"{name}.jsonl"
+        with open(canonical_file, "w", encoding="utf-8") as f:
+            for i, chunk in enumerate(chunks):
+                record = {"chunk_index": i, **chunk_to_dict(chunk)}
+                f.write(json.dumps(record, ensure_ascii=False) + "\n")
+        
+        # Dify-style golden (JSONL) - as-is from plugin
+        dify_style_file = dify_style_dir / f"{name}.jsonl"
+        rendered_dify = render_dify_style(chunks)
+        with open(dify_style_file, "w", encoding="utf-8") as f:
+            for i, text in enumerate(rendered_dify):
+                record = {"chunk_index": i, "text": text}
+                f.write(json.dumps(record, ensure_ascii=False) + "\n")
+        
+        # No-metadata golden (JSONL) - as-is from plugin
+        no_metadata_file = no_metadata_dir / f"{name}.jsonl"
+        rendered_no_meta = render_with_embedded_overlap(chunks)
+        with open(no_metadata_file, "w", encoding="utf-8") as f:
+            for i, text in enumerate(rendered_no_meta):
+                record = {"chunk_index": i, "text": text}
+                f.write(json.dumps(record, ensure_ascii=False) + "\n")
+    
+    print(f"Generated goldens for {len(fixtures)} fixtures")
 
 
 def main():
-    """Generate baseline golden outputs for all fixtures."""
-    # Ensure directories exist
-    GOLDEN_DIR.mkdir(parents=True, exist_ok=True)
-    GOLDEN_DIFY_STYLE_DIR.mkdir(parents=True, exist_ok=True)
-    GOLDEN_NO_METADATA_DIR.mkdir(parents=True, exist_ok=True)
+    parser = argparse.ArgumentParser(
+        description="Generate baseline golden outputs from plugin"
+    )
+    parser.add_argument(
+        "--plugin-path",
+        type=Path,
+        required=True,
+        help="Path to dify-markdown-chunker plugin",
+    )
+    parser.add_argument(
+        "--fixtures-dir",
+        type=Path,
+        default=None,
+        help="Path to fixtures directory (default: tests/baseline/fixtures)",
+    )
+    parser.add_argument(
+        "--output-dir",
+        type=Path,
+        default=None,
+        help="Path to output directory (default: tests/baseline)",
+    )
     
-    # Check fixtures exist
-    if not FIXTURES_DIR.exists():
-        print(f"Error: Fixtures directory not found: {FIXTURES_DIR}")
-        print("Please create fixture files first.")
+    args = parser.parse_args()
+    
+    # Resolve paths
+    script_dir = Path(__file__).parent
+    project_root = script_dir.parent
+    
+    fixtures_dir = args.fixtures_dir or project_root / "tests" / "baseline" / "fixtures"
+    output_dir = args.output_dir or project_root / "tests" / "baseline"
+    
+    if not args.plugin_path.exists():
+        print(f"Error: Plugin path does not exist: {args.plugin_path}")
         sys.exit(1)
     
-    fixtures = list(FIXTURES_DIR.glob("*.md"))
-    if not fixtures:
-        print(f"Warning: No .md fixtures found in {FIXTURES_DIR}")
-        print("Creating sample fixtures...")
-        create_sample_fixtures()
-        fixtures = list(FIXTURES_DIR.glob("*.md"))
+    if not fixtures_dir.exists():
+        print(f"Error: Fixtures directory does not exist: {fixtures_dir}")
+        sys.exit(1)
     
-    print(f"Found {len(fixtures)} fixtures")
-    print(f"Using config: max_chunk_size={DEFAULT_CONFIG.max_chunk_size}, "
-          f"overlap_size={DEFAULT_CONFIG.overlap_size}")
-    print()
+    print(f"Plugin path: {args.plugin_path}")
+    print(f"Fixtures dir: {fixtures_dir}")
+    print(f"Output dir: {output_dir}")
     
-    for fixture_path in sorted(fixtures):
-        generate_golden_for_fixture(fixture_path, DEFAULT_CONFIG)
+    # Get plugin commit
+    commit = get_plugin_commit(args.plugin_path)
+    print(f"Plugin commit: {commit}")
     
-    print()
-    print("Done! Golden outputs generated.")
-    print(f"  Core: {GOLDEN_DIR}")
-    print(f"  Dify style: {GOLDEN_DIFY_STYLE_DIR}")
-    print(f"  No metadata: {GOLDEN_NO_METADATA_DIR}")
-
-
-def create_sample_fixtures():
-    """Create sample fixture files for baseline testing."""
-    FIXTURES_DIR.mkdir(parents=True, exist_ok=True)
+    # Load plugin modules
+    print("Loading plugin modules...")
+    MarkdownChunker, ChunkConfig, Chunk = load_plugin_modules(args.plugin_path)
     
-    # Simple text
-    (FIXTURES_DIR / "simple_text.md").write_text("""# Simple Document
-
-This is a simple document with basic text content.
-
-## Section One
-
-Some text in section one. This paragraph contains enough content
-to demonstrate basic chunking behavior.
-
-## Section Two
-
-Another section with more text. The chunker should handle
-this straightforward structure without issues.
-""", encoding="utf-8")
+    # Extract config keys
+    print("Extracting config keys...")
+    config_keys = extract_config_keys(ChunkConfig)
+    config_keys_file = output_dir / "plugin_config_keys.json"
+    with open(config_keys_file, "w") as f:
+        json.dump({"commit": commit, "keys": config_keys}, f, indent=2)
+    print(f"  Saved {len(config_keys)} keys to {config_keys_file}")
     
-    # Nested fences
-    (FIXTURES_DIR / "nested_fences.md").write_text('''# Nested Code Fences
-
-Here is an example with nested fences:
-
-~~~~markdown
-This is outer fence content.
-
-```python
-def inner_code():
-    return "nested"
-```
-
-More outer content.
-~~~~
-
-And some text after.
-''', encoding="utf-8")
+    # Extract tool params
+    print("Extracting tool params...")
+    tool_params = extract_tool_params(args.plugin_path)
+    tool_params_file = output_dir / "plugin_tool_params.json"
+    with open(tool_params_file, "w") as f:
+        json.dump({"commit": commit, "params": tool_params}, f, indent=2)
+    print(f"  Saved {len(tool_params)} params to {tool_params_file}")
     
-    # Code context
-    (FIXTURES_DIR / "code_context.md").write_text("""# Code with Context
-
-Here's an explanation of the following code:
-
-```python
-def hello_world():
-    print("Hello, World!")
-```
-
-The function above prints a greeting message.
-
-## Another Example
-
-Before we show the code, let's explain what it does.
-This function calculates the factorial of a number.
-
-```python
-def factorial(n):
-    if n <= 1:
-        return 1
-    return n * factorial(n - 1)
-```
-
-After running this, you get the factorial result.
-""", encoding="utf-8")
+    # Generate goldens
+    print("Generating golden outputs...")
+    generate_goldens(
+        args.plugin_path,
+        fixtures_dir,
+        output_dir,
+        MarkdownChunker,
+        ChunkConfig,
+    )
     
-    print(f"Created sample fixtures in {FIXTURES_DIR}")
+    print("\nDone! Don't forget to update BASELINE.md with commit SHA.")
 
 
 if __name__ == "__main__":

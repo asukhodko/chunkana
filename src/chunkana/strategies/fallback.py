@@ -5,7 +5,6 @@ Universal strategy that works for any document.
 Splits by paragraphs and groups to max_chunk_size.
 """
 
-
 from ..config import ChunkConfig
 from ..types import Chunk, ContentAnalysis
 from .base import BaseStrategy

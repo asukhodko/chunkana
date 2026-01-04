@@ -5,7 +5,6 @@ For documents with code blocks or tables.
 Consolidates CodeStrategy + MixedStrategy + TableStrategy.
 """
 
-
 from ..code_context import CodeBlockRole, CodeContext, CodeContextBinder
 from ..config import ChunkConfig
 from ..types import Chunk, ContentAnalysis, FencedBlock, LatexType
@@ -563,12 +562,9 @@ class CodeAwareStrategy(BaseStrategy):
             True if contexts are related
         """
         # Check Before/After pairing
-        if (
-            config.preserve_before_after_pairs
-            and (
-                (ctx1.role == CodeBlockRole.BEFORE and ctx2.role == CodeBlockRole.AFTER)
-                or (ctx1.role == CodeBlockRole.AFTER and ctx2.role == CodeBlockRole.BEFORE)
-            )
+        if config.preserve_before_after_pairs and (
+            (ctx1.role == CodeBlockRole.BEFORE and ctx2.role == CodeBlockRole.AFTER)
+            or (ctx1.role == CodeBlockRole.AFTER and ctx2.role == CodeBlockRole.BEFORE)
         ):
             # Check proximity
             gap = abs(ctx1.code_block.end_line - ctx2.code_block.start_line)

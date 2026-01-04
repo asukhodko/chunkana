@@ -1,0 +1,22 @@
+{
+  "commit": "120d008bafd0",
+  "keys": [
+    "bind_output_blocks",
+    "code_threshold",
+    "enable_code_context_binding",
+    "enable_overlap",
+    "extract_preamble",
+    "list_count_threshold",
+    "list_ratio_threshold",
+    "max_chunk_size",
+    "max_context_chars_after",
+    "max_context_chars_before",
+    "min_chunk_size",
+    "overlap_size",
+    "preserve_atomic_blocks",
+    "preserve_before_after_pairs",
+    "related_block_max_gap",
+    "strategy_override",
+    "structure_threshold"
+  ]
+}

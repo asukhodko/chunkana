@@ -6,11 +6,10 @@ These tests validate the core correctness properties.
 """
 
 import pytest
-from hypothesis import assume, given, settings, HealthCheck
+from hypothesis import HealthCheck, assume, given, settings
 from hypothesis import strategies as st
 
 from chunkana import ChunkConfig, MarkdownChunker
-
 
 # =============================================================================
 # Generators
@@ -60,7 +59,7 @@ def markdown_with_code(draw):
     parts = []
     num_blocks = draw(st.integers(min_value=1, max_value=3))
 
-    for i in range(num_blocks):
+    for _i in range(num_blocks):
         text = draw(
             st.text(min_size=10, max_size=100).filter(lambda x: "```" not in x and x.strip())
         )
@@ -89,7 +88,7 @@ def markdown_with_tables(draw):
     sep_row = "| " + " | ".join(["---"] * cols) + " |"
 
     data_rows = []
-    for r in range(rows):
+    for _r in range(rows):
         cells = [
             draw(st.text(min_size=1, max_size=10, alphabet="abcdefghijklmnop")) for _ in range(cols)
         ]
@@ -121,8 +120,8 @@ class TestProp1NoContentLoss:
         reconstructed = "".join(c.content for c in chunks)
 
         # All non-whitespace chars should be present
-        original_chars = set(c for c in doc if not c.isspace())
-        reconstructed_chars = set(c for c in reconstructed if not c.isspace())
+        original_chars = {c for c in doc if not c.isspace()}
+        reconstructed_chars = {c for c in reconstructed if not c.isspace()}
 
         missing = original_chars - reconstructed_chars
         assert not missing, f"Characters lost: {missing}"
@@ -284,7 +283,7 @@ class TestProp9Idempotence:
             f"Different chunk counts: {len(chunks1)} vs {len(chunks2)}"
         )
 
-        for i, (c1, c2) in enumerate(zip(chunks1, chunks2)):
+        for i, (c1, c2) in enumerate(zip(chunks1, chunks2, strict=False)):
             assert c1.content == c2.content, f"Chunk {i} content differs"
             assert c1.start_line == c2.start_line, f"Chunk {i} start_line differs"
             assert c1.end_line == c2.end_line, f"Chunk {i} end_line differs"
@@ -380,7 +379,7 @@ More content.
 
         assert len(chunks1) == len(chunks2)
 
-        for c1, c2 in zip(chunks1, chunks2):
+        for c1, c2 in zip(chunks1, chunks2, strict=False):
             assert c1.content == c2.content
             assert c1.start_line == c2.start_line
             assert c1.end_line == c2.end_line
@@ -398,7 +397,7 @@ More content.
         chunks2 = chunker2.chunk(text)
 
         assert len(chunks1) == len(chunks2)
-        for c1, c2 in zip(chunks1, chunks2):
+        for c1, c2 in zip(chunks1, chunks2, strict=False):
             assert c1.content == c2.content
 
 
