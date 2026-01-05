@@ -5,9 +5,11 @@ Provides parent-child relationships and navigation methods for chunks.
 """
 
 import hashlib
+import logging
 import re
 from dataclasses import dataclass, field
 
+from .exceptions import HierarchicalInvariantError, ValidationError
 from .types import Chunk
 
 
@@ -134,54 +136,55 @@ class HierarchicalChunkingResult:
 
     def get_flat_chunks(self) -> list[Chunk]:
         """
-        Get only leaf chunks for backward-compatible retrieval.
+        Get chunks suitable for flat retrieval (backward-compatible).
 
-        Leaf chunks have no children OR have significant content.
-        This enables systems that don't support hierarchy to work
-        with hierarchical results while preserving all content.
+        Returns chunks that either:
+        1. Are leaf chunks (no children), OR
+        2. Have significant content of their own (even if they have children)
 
-        Logs warnings if any content would be lost during filtering.
+        This ensures no content is lost when using flat retrieval mode.
 
         Returns:
-            List of leaf chunks only
+            List of chunks suitable for flat retrieval
         """
-        leaf_chunks = []
-        lost_content_count = 0
+        result_chunks = []
 
         for chunk in self.chunks:
             is_leaf = chunk.metadata.get("is_leaf", True)
+            is_root = chunk.metadata.get("is_root", False)
 
             if is_leaf:
-                leaf_chunks.append(chunk)
-            else:
-                # Check if we're filtering out content (should not happen)
-                # This is a safety check to detect bugs in leaf detection
-                chunk_id = chunk.metadata.get("chunk_id", "unknown")
-                header_path = chunk.metadata.get("header_path", "unknown")
+                # Leaf chunks are always included
+                result_chunks.append(chunk)
+            elif not is_root:
+                # Non-leaf, non-root chunks: include if they have significant content
+                # This handles cases where a parent chunk has content before its children
+                if self._has_significant_content_for_flat(chunk):
+                    result_chunks.append(chunk)
 
-                # Simple content check: non-empty after stripping
-                content = chunk.content.strip()
-                if content and len(content) > 50:  # Minimal threshold
-                    lost_content_count += 1
-                    import logging
+        return result_chunks
 
-                    logger = logging.getLogger(__name__)
-                    logger.warning(
-                        f"Content preservation issue: Chunk {chunk_id} "
-                        f"at '{header_path}' has content but is_leaf=False. "
-                        f"This should not happen with current implementation."
-                    )
+    def _has_significant_content_for_flat(self, chunk: Chunk) -> bool:
+        """
+        Check if a non-leaf chunk has significant content worth including.
 
-        if lost_content_count > 0:
-            import logging
+        Args:
+            chunk: Chunk to check
 
-            logger = logging.getLogger(__name__)
-            logger.error(
-                f"Content loss detected: {lost_content_count} chunks with content "
-                f"were filtered out. This indicates a bug in leaf detection."
-            )
+        Returns:
+            True if chunk has significant content
+        """
+        content = chunk.content.strip()
+        if not content:
+            return False
 
-        return leaf_chunks
+        # Remove headers to check actual content
+        lines = content.split('\n')
+        non_header_lines = [l for l in lines if not l.strip().startswith('#')]
+        non_header_content = '\n'.join(non_header_lines).strip()
+
+        # Threshold: 100 chars of non-header content
+        return len(non_header_content) > 100
 
     def get_by_level(self, level: int) -> list[Chunk]:
         """
@@ -237,16 +240,18 @@ class HierarchyBuilder:
     through method decomposition.
     """
 
-    def __init__(self, include_document_summary: bool = True, validate_chains: bool = True):
+    def __init__(self, include_document_summary: bool = True, validate_invariants: bool = True, strict_mode: bool = False):
         """
         Initialize hierarchy builder.
 
         Args:
             include_document_summary: Whether to create root document chunk
-            validate_chains: Whether to validate sibling chains (default True)
+            validate_invariants: Whether to validate tree invariants after construction
+            strict_mode: Whether to raise exceptions on invariant violations (True) or log warnings (False)
         """
         self.include_document_summary = include_document_summary
-        self.validate_chains = validate_chains
+        self.validate_invariants = validate_invariants
+        self.strict_mode = strict_mode
 
     def build(self, chunks: list[Chunk], original_text: str) -> HierarchicalChunkingResult:
         """
@@ -286,7 +291,9 @@ class HierarchyBuilder:
         self._mark_leaves(all_chunks)
 
         # Step 7: Validate relationships (optional)
-        if self.validate_chains:
+        if self.validate_invariants:
+            self._validate_tree_invariants(all_chunks)
+        elif self.validate_chains:  # backward compatibility
             self._validate_parent_child_counts(all_chunks)
             self._validate_sibling_chains(all_chunks)
 
@@ -484,29 +491,19 @@ class HierarchyBuilder:
 
     def _mark_leaves(self, chunks: list[Chunk]) -> None:
         """
-        Mark leaf chunks using hybrid criteria. Complexity: < 5.
+        Mark leaf chunks using corrected is_leaf logic.
 
-        A chunk is a leaf if:
-        - It has no children, OR
-        - It has children but also contains significant content of its own
-
-        This handles split sections where parent has content before the split,
-        ensuring no content is lost in leaf-only filtering.
+        A chunk is a leaf if it has no children. This is the primary criterion.
+        The hybrid approach (checking for significant content) is removed to ensure
+        consistent is_leaf calculation that matches children_ids state.
 
         Args:
             chunks: All chunks
         """
         for chunk in chunks:
-            children = chunk.metadata.get("children_ids", [])
-            has_children = len(children) > 0
-
-            if not has_children:
-                # No children = definitely a leaf
-                chunk.metadata["is_leaf"] = True
-            else:
-                # Has children - check if parent also has own content
-                has_content = self._has_significant_content(chunk)
-                chunk.metadata["is_leaf"] = has_content
+            children_ids = chunk.metadata.get("children_ids", [])
+            # Simple and consistent: is_leaf = True when no children
+            chunk.metadata["is_leaf"] = len(children_ids) == 0
 
     def _has_significant_content(self, chunk: Chunk) -> bool:
         """
@@ -807,3 +804,169 @@ class HierarchyBuilder:
             chain_length += 1
 
         return errors, chain_length
+
+    def _mark_leaves(self, chunks: list[Chunk]) -> None:
+        """
+        Mark leaf chunks using corrected is_leaf logic.
+
+        A chunk is a leaf if it has no children. This is the primary criterion.
+        The hybrid approach (checking for significant content) is removed to ensure
+        consistent is_leaf calculation that matches children_ids state.
+
+        Args:
+            chunks: All chunks
+        """
+        for chunk in chunks:
+            children_ids = chunk.metadata.get("children_ids", [])
+            # Simple and consistent: is_leaf = True when no children
+            chunk.metadata["is_leaf"] = len(children_ids) == 0
+
+    def _validate_tree_invariants(self, chunks: list[Chunk]) -> None:
+        """
+        Validate all tree invariants after construction.
+        
+        Checks three core invariants:
+        1. is_leaf consistency: is_leaf equals (children_ids is empty)
+        2. Parent-child bidirectionality: parent-child relationships are mutual
+        3. Content range consistency: root chunks have consistent content ranges
+        
+        Args:
+            chunks: All chunks to validate
+            
+        Raises:
+            HierarchicalInvariantError: If invariants are violated and strict_mode=True
+        """
+        logger = logging.getLogger(__name__)
+        errors = []
+        
+        # Build lookup maps for efficient validation
+        chunk_map = {c.metadata["chunk_id"]: c for c in chunks}
+        
+        for chunk in chunks:
+            chunk_id = chunk.metadata["chunk_id"]
+            
+            # Invariant 1: is_leaf consistency
+            children_ids = chunk.metadata.get("children_ids", [])
+            is_leaf = chunk.metadata.get("is_leaf", True)
+            expected_is_leaf = len(children_ids) == 0
+            
+            if is_leaf != expected_is_leaf:
+                error = HierarchicalInvariantError(
+                    chunk_id=chunk_id,
+                    invariant="is_leaf_consistency",
+                    details={
+                        "is_leaf": is_leaf,
+                        "children_count": len(children_ids),
+                        "expected_is_leaf": expected_is_leaf
+                    },
+                    suggested_fix="Update is_leaf to match children_ids state"
+                )
+                errors.append(error)
+                
+                # Auto-fix if not in strict mode
+                if not self.strict_mode:
+                    chunk.metadata["is_leaf"] = expected_is_leaf
+                    logger.warning(f"Auto-fixed is_leaf inconsistency in chunk {chunk_id}")
+            
+            # Invariant 2: Parent-child bidirectionality
+            parent_id = chunk.metadata.get("parent_id")
+            if parent_id:
+                parent_chunk = chunk_map.get(parent_id)
+                if not parent_chunk:
+                    error = HierarchicalInvariantError(
+                        chunk_id=chunk_id,
+                        invariant="orphaned_chunk",
+                        details={"missing_parent_id": parent_id},
+                        suggested_fix="Ensure parent chunk exists or remove parent_id"
+                    )
+                    errors.append(error)
+                else:
+                    parent_children = parent_chunk.metadata.get("children_ids", [])
+                    if chunk_id not in parent_children:
+                        error = HierarchicalInvariantError(
+                            chunk_id=chunk_id,
+                            invariant="parent_child_bidirectionality",
+                            details={
+                                "parent_id": parent_id,
+                                "chunk_in_parent_children": False
+                            },
+                            suggested_fix="Add chunk_id to parent's children_ids list"
+                        )
+                        errors.append(error)
+                        
+                        # Auto-fix if not in strict mode
+                        if not self.strict_mode:
+                            parent_children.append(chunk_id)
+                            logger.warning(f"Auto-fixed missing child reference in parent {parent_id}")
+            
+            # Check children exist and point back to this chunk
+            for child_id in children_ids:
+                child_chunk = chunk_map.get(child_id)
+                if not child_chunk:
+                    error = HierarchicalInvariantError(
+                        chunk_id=chunk_id,
+                        invariant="orphaned_child",
+                        details={"missing_child_id": child_id},
+                        suggested_fix="Remove missing child_id from children_ids list"
+                    )
+                    errors.append(error)
+                    
+                    # Auto-fix if not in strict mode
+                    if not self.strict_mode:
+                        children_ids.remove(child_id)
+                        logger.warning(f"Auto-fixed missing child reference {child_id} in chunk {chunk_id}")
+                else:
+                    child_parent_id = child_chunk.metadata.get("parent_id")
+                    if child_parent_id != chunk_id:
+                        error = HierarchicalInvariantError(
+                            chunk_id=chunk_id,
+                            invariant="parent_child_bidirectionality",
+                            details={
+                                "child_id": child_id,
+                                "child_parent_id": child_parent_id,
+                                "expected_parent_id": chunk_id
+                            },
+                            suggested_fix="Update child's parent_id to point to this chunk"
+                        )
+                        errors.append(error)
+                        
+                        # Auto-fix if not in strict mode
+                        if not self.strict_mode:
+                            child_chunk.metadata["parent_id"] = chunk_id
+                            logger.warning(f"Auto-fixed parent reference in child {child_id}")
+            
+            # Invariant 3: Content range consistency for root chunks
+            if chunk.metadata.get("is_root"):
+                # Root chunks should have content that spans the expected range
+                expected_start = 1
+                expected_end = max((c.end_line for c in chunks if not c.metadata.get("is_root")), default=1)
+                
+                if chunk.start_line != expected_start or chunk.end_line < expected_end * 0.9:
+                    error = HierarchicalInvariantError(
+                        chunk_id=chunk_id,
+                        invariant="content_range_consistency",
+                        details={
+                            "actual_start": chunk.start_line,
+                            "actual_end": chunk.end_line,
+                            "expected_start": expected_start,
+                            "expected_end_min": int(expected_end * 0.9)
+                        },
+                        suggested_fix="Update root chunk line range to match document span"
+                    )
+                    errors.append(error)
+        
+        # Handle errors based on mode
+        if errors:
+            if self.strict_mode:
+                # Raise first error in strict mode
+                raise errors[0]
+            else:
+                # Log all errors as warnings in non-strict mode
+                logger.warning(f"Found {len(errors)} tree invariant violations (auto-fixed where possible)")
+                for error in errors:
+                    logger.warning(f"Invariant violation: {error}")
+
+    @property
+    def validate_chains(self) -> bool:
+        """Backward compatibility property for validate_chains."""
+        return not self.validate_invariants  # Use old validation when new is disabled

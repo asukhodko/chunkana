@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "chunkana"
-version = "0.1.0"
+version = "0.1.1"
 description = "Intelligent Markdown chunking library for RAG systems"
 readme = "README.md"
 license = "MIT"
@@ -76,6 +76,10 @@ testpaths = ["tests"]
 python_files = ["test_*.py"]
 python_functions = ["test_*"]
 addopts = "-v --tb=short"
+markers = [
+    "performance: marks tests as performance tests (may be slow)",
+    "slow: marks tests as slow running",
+]
 
 [tool.coverage.run]
 source = ["src/chunkana"]

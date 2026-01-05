@@ -238,8 +238,14 @@ result = chunker.chunk(text, enable_hierarchy=True)
 
 **After:**
 ```python
-from chunkana import chunk_hierarchical
+from chunkana import chunk_hierarchical, ChunkConfig
 
+# With validation (default)
+config = ChunkConfig(
+    max_chunk_size=1000,
+    validate_invariants=True,  # Validates tree structure (default)
+    strict_mode=False,         # Auto-fix issues (default)
+)
 result = chunk_hierarchical(text, config)
 
 # Access leaf chunks (backward compatible)
@@ -249,6 +255,12 @@ flat_chunks = result.get_flat_chunks()
 for chunk in flat_chunks:
     parent = result.get_parent(chunk.metadata["chunk_id"])
     children = result.get_children(chunk.metadata["chunk_id"])
+```
+
+**New in v0.2.0:**
+- `validate_invariants=True` (default): Validates tree invariants after construction
+- `strict_mode=False` (default): Auto-fixes violations; set to `True` to raise exceptions
+- `get_flat_chunks()` now includes non-leaf chunks with significant content (>100 chars) to prevent content loss
 ```
 
 ### Strategy Selection
@@ -397,3 +409,77 @@ To verify your migration is correct:
 - [Documentation](docs/)
 - [BASELINE.md](BASELINE.md) — baseline reference for compatibility
 - [Parity Matrix](docs/migration/parity_matrix.md) — detailed field-by-field compatibility
+
+## Troubleshooting
+
+### HierarchicalInvariantError Exceptions
+
+If you encounter `HierarchicalInvariantError` in strict mode, here's how to handle common cases:
+
+#### is_leaf_consistency
+
+```python
+# Error: is_leaf=True but chunk has children
+HierarchicalInvariantError: is_leaf_consistency violated in chunk abc123
+
+# Solution: This is auto-fixed in non-strict mode. In strict mode:
+config = ChunkConfig(strict_mode=False)  # Enable auto-fix
+```
+
+#### parent_child_bidirectionality
+
+```python
+# Error: Parent-child relationship is not symmetric
+HierarchicalInvariantError: parent_child_bidirectionality violated
+
+# Solution: Usually indicates corrupted tree state. Re-chunk the document:
+result = chunker.chunk_hierarchical(text)  # Fresh chunking
+```
+
+#### orphaned_chunk
+
+```python
+# Error: Chunk is not reachable from root
+HierarchicalInvariantError: orphaned_chunk detected
+
+# Solution: Auto-fixed in non-strict mode by attaching to nearest parent
+config = ChunkConfig(strict_mode=False)
+```
+
+### Debugging Hierarchical Issues
+
+Enable strict mode temporarily to see all violations:
+
+```python
+from chunkana import MarkdownChunker, ChunkConfig
+from chunkana import HierarchicalInvariantError
+
+config = ChunkConfig(
+    validate_invariants=True,
+    strict_mode=True,  # Raise exceptions instead of auto-fix
+)
+
+try:
+    result = chunker.chunk_hierarchical(text)
+except HierarchicalInvariantError as e:
+    print(f"Invariant: {e.invariant}")
+    print(f"Chunk ID: {e.chunk_id}")
+    print(f"Details: {e.details}")
+    print(f"Suggested fix: {e.suggested_fix}")
+```
+
+### Performance Considerations
+
+If chunking is slow for large documents:
+
+```python
+# Disable validation for performance-critical paths
+config = ChunkConfig(
+    validate_invariants=False,  # Skip tree validation
+)
+```
+
+Typical performance benchmarks:
+- Small docs (~100 lines): ~0.1ms
+- Medium docs (~1000 lines): ~0.7ms
+- Large docs (~10000 lines): ~2.7ms

@@ -106,6 +106,8 @@ class ChunkConfig:
 
     # Hierarchical chunking parameters
     include_document_summary: bool = True
+    validate_invariants: bool = True
+    strict_mode: bool = False
 
     # Content preprocessing parameters
     strip_obsidian_block_ids: bool = False

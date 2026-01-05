@@ -19,6 +19,7 @@ from typing import TYPE_CHECKING, Any
 
 from .adaptive_sizing import AdaptiveSizeCalculator
 from .config import ChunkConfig
+from .header_processor import HeaderProcessor
 from .hierarchy import HierarchicalChunkingResult, HierarchyBuilder
 from .parser import get_parser
 from .strategies import StrategySelector
@@ -53,8 +54,11 @@ class MarkdownChunker:
         self.config = config or ChunkConfig()
         self._parser = get_parser()  # Use singleton parser instance
         self._selector = StrategySelector()
+        self._header_processor = HeaderProcessor(self.config)
         self._hierarchy_builder = HierarchyBuilder(
-            include_document_summary=self.config.include_document_summary
+            include_document_summary=self.config.include_document_summary,
+            validate_invariants=self.config.validate_invariants,
+            strict_mode=self.config.strict_mode
         )
 
     def _preprocess_text(self, text: str) -> str:
@@ -145,6 +149,9 @@ class MarkdownChunker:
 
         # 5. Merge small chunks
         chunks = self._merge_small_chunks(chunks)
+
+        # 5.5. Prevent dangling headers
+        chunks = self._header_processor.prevent_dangling_headers(chunks)
 
         # 6. Apply overlap (if enabled)
         if self.config.enable_overlap and len(chunks) > 1:

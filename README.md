@@ -6,10 +6,11 @@ Intelligent Markdown chunking library for RAG systems.
 
 - 🧠 **Smart chunking**: Automatically selects optimal strategy based on content
 - 📦 **Atomic blocks**: Preserves code blocks, tables, and LaTeX formulas
-- 🌳 **Hierarchical**: Navigate chunks by header structure
+- 🌳 **Hierarchical**: Navigate chunks by header structure with tree invariant validation
 - 📊 **Rich metadata**: Header paths, content types, overlap context
 - 🔄 **Streaming**: Process large files (>10MB) efficiently
 - 🎯 **Multiple renderers**: JSON, inline metadata, Dify-compatible
+- ✅ **Quality assurance**: Automatic dangling header prevention and micro-chunk minimization
 
 ## Installation
 
@@ -58,6 +59,57 @@ config = ChunkerConfig(
 chunks = chunk_markdown(text, config)
 ```
 
+### Hierarchical Chunking Configuration
+
+For hierarchical chunking with tree structure validation:
+
+```python
+from chunkana import MarkdownChunker, ChunkConfig
+
+config = ChunkConfig(
+    max_chunk_size=1000,
+    min_chunk_size=100,
+    overlap_size=100,
+    validate_invariants=True,  # Enable tree invariant validation (default: True)
+    strict_mode=False,         # Auto-fix violations vs raise exceptions (default: False)
+)
+
+chunker = MarkdownChunker(config)
+result = chunker.chunk_hierarchical(text)
+
+# Navigate the hierarchy
+root = result.get_chunk(result.root_id)
+children = result.get_children(result.root_id)
+flat_chunks = result.get_flat_chunks()
+```
+
+**Configuration options:**
+- `validate_invariants` (default: `True`): Validates tree invariants after construction
+- `strict_mode` (default: `False`): When `True`, raises exceptions on invariant violations; when `False`, auto-fixes issues and logs warnings
+
+## Exception Handling
+
+Chunkana provides a hierarchy of exceptions for error handling:
+
+```python
+from chunkana import (
+    ChunkanaError,              # Base exception for all chunkana errors
+    HierarchicalInvariantError, # Tree structure violations
+    ValidationError,            # Validation failures
+    ConfigurationError,         # Invalid configuration
+    TreeConstructionError,      # Tree building failures
+)
+
+try:
+    result = chunker.chunk_hierarchical(text)
+except HierarchicalInvariantError as e:
+    print(f"Invariant violation: {e.invariant}")
+    print(f"Chunk ID: {e.chunk_id}")
+    print(f"Suggested fix: {e.suggested_fix}")
+except ChunkanaError as e:
+    print(f"Chunking error: {e}")
+```
+
 ## Renderers
 
 ```python
@@ -73,12 +125,31 @@ json_output = render_json(chunks)
 dify_output = render_dify_style(chunks)
 ```
 
+## Quality Features
+
+### Dangling Header Prevention
+
+Chunkana automatically prevents headers from being separated from their content. When a chunk would end with a header (like `#### Details`), the header is moved to the next chunk to maintain semantic coherence.
+
+### Micro-Chunk Minimization
+
+Small chunks are intelligently merged with adjacent content when they lack structural significance, reducing fragmentation while preserving important standalone elements like code blocks and tables.
+
+### Tree Invariant Validation
+
+Hierarchical chunking validates:
+- **is_leaf consistency**: Leaf status matches children presence
+- **Parent-child bidirectionality**: All relationships are symmetric
+- **No orphaned chunks**: Every chunk is reachable from root
+
 ## Documentation
 
 - [Quick Start](docs/quickstart.md)
 - [Configuration](docs/config.md)
 - [Strategies](docs/strategies.md)
 - [Renderers](docs/renderers.md)
+- [Debug Mode](docs/debug_mode.md)
+- [Migration Guide](MIGRATION_GUIDE.md)
 
 ## License
 

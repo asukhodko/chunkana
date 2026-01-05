@@ -19,7 +19,7 @@ Advanced usage:
     chunks = chunker.chunk(text)
 """
 
-__version__ = "0.1.0"
+__version__ = "0.1.1"
 
 # Core API
 from .api import (
@@ -37,6 +37,13 @@ from .api import (
 # Classes
 from .chunker import MarkdownChunker
 from .config import ChunkConfig, ChunkerConfig
+from .exceptions import (
+    ChunkanaError,
+    ConfigurationError,
+    HierarchicalInvariantError,
+    TreeConstructionError,
+    ValidationError,
+)
 from .hierarchy import HierarchicalChunkingResult, HierarchyBuilder
 
 # Renderers
@@ -89,6 +96,12 @@ __all__ = [
     "FencedBlock",
     "ChunkingResult",
     "ChunkingMetrics",
+    # Classes - Exceptions
+    "ChunkanaError",
+    "HierarchicalInvariantError",
+    "ValidationError",
+    "ConfigurationError",
+    "TreeConstructionError",
     # Classes - Hierarchy
     "HierarchicalChunkingResult",
     "HierarchyBuilder",
