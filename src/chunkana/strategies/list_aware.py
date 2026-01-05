@@ -499,7 +499,9 @@ class ListAwareStrategy(BaseStrategy):
             header_path="",  # Will be filled by _add_header_path_to_chunk
         )
 
-    def _add_header_path_to_chunk(self, chunk: Chunk, headers: list[Header], start_line: int) -> None:
+    def _add_header_path_to_chunk(
+        self, chunk: Chunk, headers: list[Header], start_line: int
+    ) -> None:
         """Add header_path metadata to a chunk.
 
         Builds header hierarchy path similar to structural strategy.

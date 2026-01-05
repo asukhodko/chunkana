@@ -64,13 +64,15 @@ def extract_tool_params(plugin_path: Path) -> list[dict]:
 
     params = []
     for param in schema.get("parameters", []):
-        params.append({
-            "name": param.get("name"),
-            "type": param.get("type"),
-            "required": param.get("required", False),
-            "default": param.get("default"),
-            "description": param.get("human_description", {}).get("en_US", ""),
-        })
+        params.append(
+            {
+                "name": param.get("name"),
+                "type": param.get("type"),
+                "required": param.get("required", False),
+                "default": param.get("default"),
+                "description": param.get("human_description", {}).get("en_US", ""),
+            }
+        )
 
     return params
 
@@ -191,9 +193,7 @@ def generate_goldens(
 
 
 def main():
-    parser = argparse.ArgumentParser(
-        description="Generate baseline golden outputs from plugin"
-    )
+    parser = argparse.ArgumentParser(description="Generate baseline golden outputs from plugin")
     parser.add_argument(
         "--plugin-path",
         type=Path,

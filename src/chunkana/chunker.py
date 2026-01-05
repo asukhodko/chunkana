@@ -58,7 +58,7 @@ class MarkdownChunker:
         self._hierarchy_builder = HierarchyBuilder(
             include_document_summary=self.config.include_document_summary,
             validate_invariants=self.config.validate_invariants,
-            strict_mode=self.config.strict_mode
+            strict_mode=self.config.strict_mode,
         )
 
     def _preprocess_text(self, text: str) -> str:

@@ -125,10 +125,10 @@ class TestHierarchicalChunkingResult:
         for chunk in flat:
             is_leaf = chunk.metadata.get("is_leaf", True)
             is_root = chunk.metadata.get("is_root", False)
-            
+
             # Root should never be in flat chunks
             assert is_root is False
-            
+
             # Either it's a leaf, or it has significant content
             if not is_leaf:
                 # Non-leaf chunks in flat results must have significant content
