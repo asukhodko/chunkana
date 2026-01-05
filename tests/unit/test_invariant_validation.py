@@ -4,7 +4,6 @@ Unit tests for hierarchical invariant validation.
 Tests specific scenarios and edge cases for invariant checking.
 """
 
-
 import pytest
 
 from chunkana import ChunkConfig, MarkdownChunker

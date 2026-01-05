@@ -2,12 +2,28 @@
 Header processor for preventing dangling headers.
 
 Detects and fixes situations where headers are separated from their content.
+
+v2 Changes:
+- Universal dangling header detection (not tied to specific header_path)
+- Works for header levels 3-6 (### and deeper)
+- Proper header_moved_from tracking with chunk_index
 """
 
 import re
+from dataclasses import dataclass
 
 from .config import ChunkConfig
 from .types import Chunk
+
+
+@dataclass
+class DanglingHeaderInfo:
+    """Information about a detected dangling header."""
+
+    chunk_index: int
+    header_text: str
+    header_level: int
+    header_line_in_chunk: int  # Line index within the chunk (0-based)
 
 
 class DanglingHeaderDetector:
@@ -16,9 +32,11 @@ class DanglingHeaderDetector:
 
     A dangling header is a header that appears at the end of a chunk
     while its content is in the next chunk.
+
+    v2: Universal detection for ANY header_path, levels 3-6.
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         # Regex for detecting headers (ATX style)
         self.header_pattern = re.compile(r"^(#{1,6})\s+(.+)$", re.MULTILINE)
 
@@ -43,14 +61,37 @@ class DanglingHeaderDetector:
 
         return dangling_indices
 
+    def detect_dangling_headers_detailed(self, chunks: list[Chunk]) -> list[DanglingHeaderInfo]:
+        """
+        Detect dangling headers with detailed information.
+
+        Args:
+            chunks: List of chunks to analyze
+
+        Returns:
+            List of DanglingHeaderInfo for each detected dangling header
+        """
+        results = []
+
+        for i in range(len(chunks) - 1):
+            current_chunk = chunks[i]
+            next_chunk = chunks[i + 1]
+
+            info = self._get_dangling_header_info(current_chunk, next_chunk, i)
+            if info:
+                results.append(info)
+
+        return results
+
     def _has_dangling_header(self, current_chunk: Chunk, next_chunk: Chunk) -> bool:
         """
         Check if current chunk has a dangling header.
 
-        A header is dangling if:
-        1. Current chunk ends with a header (level 4+ typically)
-        2. Next chunk starts with content that belongs to that header
-        3. The header has minimal or no content after it in current chunk
+        v2: Universal detection algorithm:
+        1. Find the last non-empty line in current chunk
+        2. Check if it's a header (level 3-6)
+        3. Check if next chunk starts with content (not a header of same/higher level)
+        4. If next chunk has content for this header, it's dangling
 
         Args:
             current_chunk: Current chunk to check
@@ -59,41 +100,117 @@ class DanglingHeaderDetector:
         Returns:
             True if current chunk has dangling header
         """
-        current_lines = current_chunk.content.strip().split("\n")
-        next_lines = next_chunk.content.strip().split("\n")
+        # Find last non-empty line
+        content = current_chunk.content.rstrip()
+        lines = content.split("\n")
 
-        if not current_lines or not next_lines:
+        last_line = None
+        for line in reversed(lines):
+            stripped = line.strip()
+            if stripped:
+                last_line = stripped
+                break
+
+        if not last_line:
             return False
 
-        # Check if current chunk ends with a header
-        last_line = current_lines[-1].strip()
+        # Check if it's a header
         header_match = self.header_pattern.match(last_line)
-
         if not header_match:
             return False
 
-        header_level = len(header_match.group(1))  # Count # characters
+        header_level = len(header_match.group(1))
 
-        # Only consider level 4+ headers as potentially dangling
-        # Level 1-3 headers are usually section boundaries
-        if header_level < 4:
+        # v2: Consider levels 3-6 as potentially dangling
+        # Levels 1-2 are major section boundaries, usually not dangling
+        if header_level < 3:
             return False
 
-        # Check if there's minimal content after the header
-        content_after_header = self._get_content_after_last_header(current_lines)
+        # Check if there's minimal content after the header in current chunk
+        content_after = self._get_content_after_last_header(lines)
+        if len(content_after.strip()) > 50:
+            return False  # Has substantial content, not dangling
 
-        # If there's substantial content after the header, it's not dangling
-        if len(content_after_header.strip()) > 50:
+        # Check next chunk
+        next_content = next_chunk.content.lstrip()
+        if not next_content:
             return False
 
-        # Check if next chunk starts with content (not another header)
-        first_next_line = next_lines[0].strip()
-        if self.header_pattern.match(first_next_line):
-            return False  # Next chunk starts with header, not content
+        next_first_line = next_content.split("\n")[0].strip()
 
-        # Check if next chunk has content that could belong to the header
-        next_content = next_chunk.content.strip()
-        return len(next_content) >= 20
+        # If next chunk starts with a header of same or higher level, not dangling
+        next_header_match = self.header_pattern.match(next_first_line)
+        if next_header_match:
+            next_level = len(next_header_match.group(1))
+            if next_level <= header_level:
+                return False  # Next chunk starts with same/higher level header
+
+        # Next chunk has content that belongs to this header
+        return len(next_content.strip()) >= 20
+
+    def _get_dangling_header_info(
+        self, current_chunk: Chunk, next_chunk: Chunk, chunk_index: int
+    ) -> DanglingHeaderInfo | None:
+        """
+        Get detailed info about a dangling header if present.
+
+        Args:
+            current_chunk: Current chunk to check
+            next_chunk: Next chunk in sequence
+            chunk_index: Index of current chunk
+
+        Returns:
+            DanglingHeaderInfo if dangling header found, None otherwise
+        """
+        content = current_chunk.content.rstrip()
+        lines = content.split("\n")
+
+        # Find last non-empty line and its index
+        last_line = None
+        last_line_idx = -1
+        for i in range(len(lines) - 1, -1, -1):
+            stripped = lines[i].strip()
+            if stripped:
+                last_line = stripped
+                last_line_idx = i
+                break
+
+        if not last_line:
+            return None
+
+        header_match = self.header_pattern.match(last_line)
+        if not header_match:
+            return None
+
+        header_level = len(header_match.group(1))
+        header_text = header_match.group(2).strip()
+
+        if header_level < 3:
+            return None
+
+        # Check content after header
+        content_after = self._get_content_after_last_header(lines)
+        if len(content_after.strip()) > 50:
+            return None
+
+        # Check next chunk
+        next_content = next_chunk.content.lstrip()
+        if not next_content or len(next_content.strip()) < 20:
+            return None
+
+        next_first_line = next_content.split("\n")[0].strip()
+        next_header_match = self.header_pattern.match(next_first_line)
+        if next_header_match:
+            next_level = len(next_header_match.group(1))
+            if next_level <= header_level:
+                return None
+
+        return DanglingHeaderInfo(
+            chunk_index=chunk_index,
+            header_text=header_text,
+            header_level=header_level,
+            header_line_in_chunk=last_line_idx,
+        )
 
     def _get_content_after_last_header(self, lines: list[str]) -> str:
         """
@@ -123,12 +240,19 @@ class DanglingHeaderDetector:
 class HeaderMover:
     """
     Moves headers between chunks to fix dangling situations.
+
+    v2: Proper header_moved_from tracking with chunk_index.
     """
 
     def __init__(self, config: ChunkConfig):
         self.config = config
 
-    def fix_dangling_header(self, chunks: list[Chunk], dangling_index: int) -> list[Chunk]:
+    def fix_dangling_header(
+        self,
+        chunks: list[Chunk],
+        dangling_index: int,
+        header_info: DanglingHeaderInfo | None = None,
+    ) -> list[Chunk]:
         """
         Fix a dangling header by moving it or merging chunks.
 
@@ -140,6 +264,7 @@ class HeaderMover:
         Args:
             chunks: List of chunks
             dangling_index: Index of chunk with dangling header
+            header_info: Optional detailed info about the dangling header
 
         Returns:
             Modified list of chunks
@@ -156,6 +281,26 @@ class HeaderMover:
 
         # Remove header from current chunk
         new_current_content = "\n".join(current_lines[:-1]).strip()
+
+        # Handle edge case: if removing header leaves empty content
+        if not new_current_content.strip():
+            # Merge entire current chunk into next
+            new_next_content = current_chunk.content.strip() + "\n\n" + next_chunk.content
+            if len(new_next_content) <= self.config.max_chunk_size:
+                new_next_chunk = Chunk(
+                    content=new_next_content,
+                    start_line=current_chunk.start_line,
+                    end_line=next_chunk.end_line,
+                    metadata=next_chunk.metadata.copy(),
+                )
+                new_next_chunk.metadata["dangling_header_fixed"] = True
+                new_next_chunk.metadata["merge_reason"] = "dangling_header_prevention"
+                # Track the source even for merge
+                self._track_header_moved_from(new_next_chunk, dangling_index)
+
+                result = chunks.copy()
+                result[dangling_index : dangling_index + 2] = [new_next_chunk]
+                return result
 
         # Add header to beginning of next chunk
         new_next_content = header_line + "\n\n" + next_chunk.content
@@ -177,9 +322,9 @@ class HeaderMover:
                 metadata=next_chunk.metadata.copy(),
             )
 
-            # Update metadata
+            # Update metadata - v2: use chunk_index instead of chunk_id
             new_next_chunk.metadata["dangling_header_fixed"] = True
-            new_next_chunk.metadata["header_moved_from"] = current_chunk.metadata.get("chunk_id")
+            self._track_header_moved_from(new_next_chunk, dangling_index)
 
             # Replace chunks
             result = chunks.copy()
@@ -204,6 +349,8 @@ class HeaderMover:
                 # Update metadata
                 merged_chunk.metadata["dangling_header_fixed"] = True
                 merged_chunk.metadata["merge_reason"] = "dangling_header_prevention"
+                # Track the source even for merge
+                self._track_header_moved_from(merged_chunk, dangling_index)
 
                 # Replace two chunks with one
                 result = chunks.copy()
@@ -217,15 +364,37 @@ class HeaderMover:
 
                 logger = logging.getLogger(__name__)
                 logger.warning(
-                    f"Cannot fix dangling header in chunk {current_chunk.metadata.get('chunk_id', 'unknown')} "
+                    f"Cannot fix dangling header in chunk {dangling_index} "
                     f"without exceeding size limits. Header: {header_line[:50]}..."
                 )
                 return chunks
+
+    def _track_header_moved_from(self, target_chunk: Chunk, source_index: int) -> None:
+        """
+        Track the source chunk index when a header is moved.
+
+        v2: Uses chunk_index (int) instead of chunk_id.
+        Supports multiple moves by storing as list when needed.
+
+        Args:
+            target_chunk: The chunk receiving the moved header
+            source_index: The chunk_index of the source chunk
+        """
+        existing = target_chunk.metadata.get("header_moved_from")
+
+        if existing is None:
+            target_chunk.metadata["header_moved_from"] = source_index
+        elif isinstance(existing, int):
+            target_chunk.metadata["header_moved_from"] = [existing, source_index]
+        elif isinstance(existing, list):
+            target_chunk.metadata["header_moved_from"].append(source_index)
 
 
 class HeaderProcessor:
     """
     Main component for preventing dangling headers.
+
+    v2: Universal detection for all sections, proper header_moved_from tracking.
     """
 
     def __init__(self, config: ChunkConfig):
@@ -236,6 +405,8 @@ class HeaderProcessor:
     def prevent_dangling_headers(self, chunks: list[Chunk]) -> list[Chunk]:
         """
         Prevent headers from being separated from their content.
+
+        v2: Works for ALL sections (Scope, Impact, Leadership, etc.)
 
         Args:
             chunks: List of chunks to process
@@ -250,19 +421,20 @@ class HeaderProcessor:
 
         # Iteratively fix dangling headers
         # We need to iterate because fixing one dangling header might create another
-        max_iterations = 5  # Prevent infinite loops
+        max_iterations = 10  # Increased for complex documents
         iteration = 0
 
         while iteration < max_iterations:
-            dangling_indices = self.detector.detect_dangling_headers(result)
+            # Use detailed detection for better tracking
+            dangling_infos = self.detector.detect_dangling_headers_detailed(result)
 
-            if not dangling_indices:
+            if not dangling_infos:
                 break  # No more dangling headers
 
             # Fix the first dangling header found
             # We fix one at a time because indices change after modifications
-            dangling_index = dangling_indices[0]
-            result = self.mover.fix_dangling_header(result, dangling_index)
+            info = dangling_infos[0]
+            result = self.mover.fix_dangling_header(result, info.chunk_index, info)
 
             iteration += 1
 

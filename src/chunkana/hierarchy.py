@@ -809,22 +809,6 @@ class HierarchyBuilder:
 
         return errors, chain_length
 
-    def _mark_leaves(self, chunks: list[Chunk]) -> None:
-        """
-        Mark leaf chunks using corrected is_leaf logic.
-
-        A chunk is a leaf if it has no children. This is the primary criterion.
-        The hybrid approach (checking for significant content) is removed to ensure
-        consistent is_leaf calculation that matches children_ids state.
-
-        Args:
-            chunks: All chunks
-        """
-        for chunk in chunks:
-            children_ids = chunk.metadata.get("children_ids", [])
-            # Simple and consistent: is_leaf = True when no children
-            chunk.metadata["is_leaf"] = len(children_ids) == 0
-
     def _validate_tree_invariants(self, chunks: list[Chunk]) -> None:
         """
         Validate all tree invariants after construction.

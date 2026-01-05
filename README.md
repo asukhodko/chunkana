@@ -142,6 +142,28 @@ Hierarchical chunking validates:
 - **Parent-child bidirectionality**: All relationships are symmetric
 - **No orphaned chunks**: Every chunk is reachable from root
 
+### Line Range Contract (Hierarchical Mode)
+
+In hierarchical chunking mode, `start_line` and `end_line` follow a specific contract:
+
+- **Leaf nodes**: Line range covers only the chunk's own content
+- **Internal nodes**: Line range covers only the node's own content (not children)
+- **Root node**: Line range covers the entire document (1 to last line)
+
+**Important**: The sum of children's line ranges does NOT equal the parent's range. The parent contains only its "header" content, while children contain detailed content. This is by design for hierarchical navigation.
+
+```python
+result = chunker.chunk_hierarchical(text)
+root = result.get_chunk(result.root_id)
+
+# Root covers entire document
+print(f"Root: lines {root.start_line}-{root.end_line}")
+
+# Children cover their own sections
+for child in result.get_children(result.root_id):
+    print(f"Child: lines {child.start_line}-{child.end_line}")
+```
+
 ## Documentation
 
 - [Quick Start](docs/quickstart.md)

@@ -21,6 +21,7 @@ from .adaptive_sizing import AdaptiveSizeCalculator
 from .config import ChunkConfig
 from .header_processor import HeaderProcessor
 from .hierarchy import HierarchicalChunkingResult, HierarchyBuilder
+from .metadata_recalculator import MetadataRecalculator
 from .parser import get_parser
 from .strategies import StrategySelector
 from .types import Chunk, ChunkingMetrics, ContentAnalysis
@@ -55,6 +56,7 @@ class MarkdownChunker:
         self._parser = get_parser()  # Use singleton parser instance
         self._selector = StrategySelector()
         self._header_processor = HeaderProcessor(self.config)
+        self._metadata_recalculator = MetadataRecalculator()
         self._hierarchy_builder = HierarchyBuilder(
             include_document_summary=self.config.include_document_summary,
             validate_invariants=self.config.validate_invariants,
@@ -160,12 +162,15 @@ class MarkdownChunker:
         # 7. Add standard metadata
         chunks = self._add_metadata(chunks, strategy.name)
 
-        # 8. Add adaptive sizing metadata (if enabled)
+        # 8. Recalculate derived metadata (section_tags) after all post-processing
+        chunks = self._metadata_recalculator.recalculate_all(chunks)
+
+        # 9. Add adaptive sizing metadata (if enabled)
         if self.config.use_adaptive_sizing:
             for chunk in chunks:
                 chunk.metadata.update(adaptive_metadata)
 
-        # 9. Validate
+        # 10. Validate
         self._validate(chunks, normalized_text)
 
         return chunks
