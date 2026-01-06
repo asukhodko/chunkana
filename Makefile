@@ -79,7 +79,7 @@ format:
 	$(VENV_BIN)/ruff check --fix .
 
 # Run all checks
-check: lint typecheck test
+check: lint typecheck test-cov
 
 # Build package
 build:
