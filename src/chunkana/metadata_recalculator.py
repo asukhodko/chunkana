@@ -132,7 +132,6 @@ class MetadataRecalculator:
 
         return errors
 
-
     def validate_in_debug_mode(self, chunks: list[Chunk], debug: bool = False) -> list[Chunk]:
         """
         Validate section_tags consistency in debug mode.
@@ -151,6 +150,7 @@ class MetadataRecalculator:
             return chunks
 
         import logging
+
         logger = logging.getLogger(__name__)
 
         errors = self.validate_section_tags_consistency(chunks)

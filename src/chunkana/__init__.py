@@ -45,6 +45,8 @@ from .exceptions import (
     ValidationError,
 )
 from .hierarchy import HierarchicalChunkingResult, HierarchyBuilder
+from .invariant_validator import InvariantValidator
+from .invariant_validator import ValidationResult as InvariantValidationResult
 
 # Renderers
 from .renderers import (
@@ -54,6 +56,7 @@ from .renderers import (
     render_with_embedded_overlap,
     render_with_prev_overlap,
 )
+from .section_splitter import SectionSplitter
 
 # Streaming
 from .streaming import StreamingChunker, StreamingConfig
@@ -105,6 +108,11 @@ __all__ = [
     # Classes - Hierarchy
     "HierarchicalChunkingResult",
     "HierarchyBuilder",
+    # Classes - Section Splitting
+    "SectionSplitter",
+    # Classes - Invariant Validation
+    "InvariantValidator",
+    "InvariantValidationResult",
     # Classes - Streaming
     "StreamingChunker",
     "StreamingConfig",

@@ -23,6 +23,7 @@ from .header_processor import HeaderProcessor
 from .hierarchy import HierarchicalChunkingResult, HierarchyBuilder
 from .metadata_recalculator import MetadataRecalculator
 from .parser import get_parser
+from .section_splitter import SectionSplitter
 from .strategies import StrategySelector
 from .types import Chunk, ChunkingMetrics, ContentAnalysis
 
@@ -56,6 +57,7 @@ class MarkdownChunker:
         self._parser = get_parser()  # Use singleton parser instance
         self._selector = StrategySelector()
         self._header_processor = HeaderProcessor(self.config)
+        self._section_splitter = SectionSplitter(self.config)
         self._metadata_recalculator = MetadataRecalculator()
         self._hierarchy_builder = HierarchyBuilder(
             include_document_summary=self.config.include_document_summary,
@@ -153,7 +155,14 @@ class MarkdownChunker:
         chunks = self._merge_small_chunks(chunks)
 
         # 5.5. Prevent dangling headers
+        # CRITICAL: This MUST happen BEFORE section splitting
+        # so that headers are "attached" to their content before any splitting
         chunks = self._header_processor.prevent_dangling_headers(chunks)
+
+        # 5.6. Split oversize sections
+        # CRITICAL: This MUST happen AFTER dangling header fix
+        # so that split chunks can repeat the header_stack
+        chunks = self._section_splitter.split_oversize_sections(chunks)
 
         # 6. Apply overlap (if enabled)
         if self.config.enable_overlap and len(chunks) > 1:
@@ -433,6 +442,10 @@ class MarkdownChunker:
         Validate chunking results.
 
         Checks domain properties PROP-1 through PROP-5.
+
+        v2.1 Changes:
+        - Removed section_integrity as valid oversize reason for text/lists
+        - Only code_block_integrity, table_integrity, list_item_integrity are valid
         """
         if not chunks:
             return
@@ -447,6 +460,8 @@ class MarkdownChunker:
             pass
 
         # PROP-2: Size bounds
+        # v2.1: Only code_block_integrity and table_integrity are auto-assigned
+        # section_integrity is REMOVED - text/lists should be split, not marked oversize
         for chunk in chunks:
             if chunk.size > self.config.max_chunk_size and not chunk.metadata.get("allow_oversize"):
                 # Set default oversize metadata
@@ -456,7 +471,9 @@ class MarkdownChunker:
                 elif "|" in chunk.content and "---" in chunk.content:
                     chunk.metadata["oversize_reason"] = "table_integrity"
                 else:
-                    chunk.metadata["oversize_reason"] = "section_integrity"
+                    # v2.1: Use list_item_integrity instead of section_integrity
+                    # This indicates the chunk couldn't be split further
+                    chunk.metadata["oversize_reason"] = "list_item_integrity"
 
         # PROP-3: Monotonic ordering
         for i in range(len(chunks) - 1):

@@ -3,10 +3,11 @@ Header processor for preventing dangling headers.
 
 Detects and fixes situations where headers are separated from their content.
 
-v2 Changes:
+v2.1 Changes:
 - Universal dangling header detection (not tied to specific header_path)
-- Works for header levels 3-6 (### and deeper)
-- Proper header_moved_from tracking with chunk_index
+- Works for header levels 2-6 (## and deeper) - expanded from 3-6
+- Reduced threshold from 50 to 30 characters
+- Uses chunk_id instead of chunk_index for stable tracking
 """
 
 import re
@@ -21,6 +22,7 @@ class DanglingHeaderInfo:
     """Information about a detected dangling header."""
 
     chunk_index: int
+    chunk_id: str | None  # Stable chunk_id for tracking
     header_text: str
     header_level: int
     header_line_in_chunk: int  # Line index within the chunk (0-based)
@@ -33,8 +35,13 @@ class DanglingHeaderDetector:
     A dangling header is a header that appears at the end of a chunk
     while its content is in the next chunk.
 
-    v2: Universal detection for ANY header_path, levels 3-6.
+    v2.1 Changes:
+    - Detects levels 2-6 (expanded from 3-6)
+    - Reduced threshold from 50 to 30 characters
     """
+
+    # v2.1: Reduced from 50 to 30
+    MIN_CONTENT_THRESHOLD = 30
 
     def __init__(self) -> None:
         # Regex for detecting headers (ATX style)
@@ -87,9 +94,9 @@ class DanglingHeaderDetector:
         """
         Check if current chunk has a dangling header.
 
-        v2: Universal detection algorithm:
+        v2.1: Universal detection algorithm:
         1. Find the last non-empty line in current chunk
-        2. Check if it's a header (level 3-6)
+        2. Check if it's a header (level 2-6) - expanded from 3-6
         3. Check if next chunk starts with content (not a header of same/higher level)
         4. If next chunk has content for this header, it's dangling
 
@@ -121,14 +128,15 @@ class DanglingHeaderDetector:
 
         header_level = len(header_match.group(1))
 
-        # v2: Consider levels 3-6 as potentially dangling
-        # Levels 1-2 are major section boundaries, usually not dangling
-        if header_level < 3:
+        # v2.1: Consider levels 2-6 as potentially dangling (expanded from 3-6)
+        # Level 1 is document title, usually not dangling
+        if header_level < 2:
             return False
 
         # Check if there's minimal content after the header in current chunk
+        # v2.1: Reduced threshold from 50 to 30
         content_after = self._get_content_after_last_header(lines)
-        if len(content_after.strip()) > 50:
+        if len(content_after.strip()) > self.MIN_CONTENT_THRESHOLD:
             return False  # Has substantial content, not dangling
 
         # Check next chunk
@@ -185,12 +193,13 @@ class DanglingHeaderDetector:
         header_level = len(header_match.group(1))
         header_text = header_match.group(2).strip()
 
-        if header_level < 3:
+        # v2.1: Detect levels 2-6 (expanded from 3-6)
+        if header_level < 2:
             return None
 
-        # Check content after header
+        # Check content after header (v2.1: threshold 30)
         content_after = self._get_content_after_last_header(lines)
-        if len(content_after.strip()) > 50:
+        if len(content_after.strip()) > self.MIN_CONTENT_THRESHOLD:
             return None
 
         # Check next chunk
@@ -207,6 +216,7 @@ class DanglingHeaderDetector:
 
         return DanglingHeaderInfo(
             chunk_index=chunk_index,
+            chunk_id=current_chunk.metadata.get("chunk_id"),  # v2.1: Stable ID
             header_text=header_text,
             header_level=header_level,
             header_line_in_chunk=last_line_idx,
@@ -241,7 +251,9 @@ class HeaderMover:
     """
     Moves headers between chunks to fix dangling situations.
 
-    v2: Proper header_moved_from tracking with chunk_index.
+    v2.1 Changes:
+    - Uses chunk_id instead of chunk_index for stable tracking
+    - header_moved_from_id field instead of header_moved_from
     """
 
     def __init__(self, config: ChunkConfig):
@@ -295,8 +307,8 @@ class HeaderMover:
                 )
                 new_next_chunk.metadata["dangling_header_fixed"] = True
                 new_next_chunk.metadata["merge_reason"] = "dangling_header_prevention"
-                # Track the source even for merge
-                self._track_header_moved_from(new_next_chunk, dangling_index)
+                # v2.1: Track with chunk_id (stable)
+                self._track_header_moved_from(new_next_chunk, header_info)
 
                 result = chunks.copy()
                 result[dangling_index : dangling_index + 2] = [new_next_chunk]
@@ -322,9 +334,9 @@ class HeaderMover:
                 metadata=next_chunk.metadata.copy(),
             )
 
-            # Update metadata - v2: use chunk_index instead of chunk_id
+            # v2.1: Update metadata with chunk_id tracking
             new_next_chunk.metadata["dangling_header_fixed"] = True
-            self._track_header_moved_from(new_next_chunk, dangling_index)
+            self._track_header_moved_from(new_next_chunk, header_info)
 
             # Replace chunks
             result = chunks.copy()
@@ -346,11 +358,10 @@ class HeaderMover:
                     metadata=current_chunk.metadata.copy(),
                 )
 
-                # Update metadata
+                # v2.1: Update metadata with chunk_id tracking
                 merged_chunk.metadata["dangling_header_fixed"] = True
                 merged_chunk.metadata["merge_reason"] = "dangling_header_prevention"
-                # Track the source even for merge
-                self._track_header_moved_from(merged_chunk, dangling_index)
+                self._track_header_moved_from(merged_chunk, header_info)
 
                 # Replace two chunks with one
                 result = chunks.copy()
@@ -369,32 +380,48 @@ class HeaderMover:
                 )
                 return chunks
 
-    def _track_header_moved_from(self, target_chunk: Chunk, source_index: int) -> None:
+    def _track_header_moved_from(
+        self, target_chunk: Chunk, header_info: DanglingHeaderInfo | None
+    ) -> None:
         """
-        Track the source chunk index when a header is moved.
+        Track the source chunk when a header is moved.
 
-        v2: Uses chunk_index (int) instead of chunk_id.
+        v2.1: Uses chunk_id (stable) instead of chunk_index.
         Supports multiple moves by storing as list when needed.
 
         Args:
             target_chunk: The chunk receiving the moved header
-            source_index: The chunk_index of the source chunk
+            header_info: Info about the dangling header (contains chunk_id)
         """
-        existing = target_chunk.metadata.get("header_moved_from")
+        # v2.1: Use chunk_id for stable tracking
+        source_id = header_info.chunk_id if header_info else None
+
+        if source_id is None:
+            # Fallback to index if no chunk_id available
+            if header_info:
+                source_id = str(header_info.chunk_index)
+            else:
+                return
+
+        existing = target_chunk.metadata.get("header_moved_from_id")
 
         if existing is None:
-            target_chunk.metadata["header_moved_from"] = source_index
-        elif isinstance(existing, int):
-            target_chunk.metadata["header_moved_from"] = [existing, source_index]
+            target_chunk.metadata["header_moved_from_id"] = source_id
+        elif isinstance(existing, str):
+            target_chunk.metadata["header_moved_from_id"] = [existing, source_id]
         elif isinstance(existing, list):
-            target_chunk.metadata["header_moved_from"].append(source_index)
+            target_chunk.metadata["header_moved_from_id"].append(source_id)
 
 
 class HeaderProcessor:
     """
     Main component for preventing dangling headers.
 
-    v2: Universal detection for all sections, proper header_moved_from tracking.
+    v2.1 Changes:
+    - Universal detection for all sections
+    - Levels 2-6 (expanded from 3-6)
+    - Threshold 30 chars (reduced from 50)
+    - chunk_id tracking (stable)
     """
 
     def __init__(self, config: ChunkConfig):
@@ -406,7 +433,11 @@ class HeaderProcessor:
         """
         Prevent headers from being separated from their content.
 
-        v2: Works for ALL sections (Scope, Impact, Leadership, etc.)
+        IMPORTANT: This is called BEFORE SectionSplitter, so headers
+        are "attached" to their content before any splitting occurs.
+
+        v2.1: Works for ALL sections (Scope, Impact, Leadership, etc.)
+        Detects levels 2-6 with threshold 30 chars.
 
         Args:
             chunks: List of chunks to process
@@ -421,7 +452,7 @@ class HeaderProcessor:
 
         # Iteratively fix dangling headers
         # We need to iterate because fixing one dangling header might create another
-        max_iterations = 10  # Increased for complex documents
+        max_iterations = 20  # Increased for complex documents
         iteration = 0
 
         while iteration < max_iterations:

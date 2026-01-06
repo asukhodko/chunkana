@@ -5,6 +5,38 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.3] - 2026-01-06
+
+### Added
+- **SectionSplitter Component**: New component for splitting oversize sections with header_stack repetition
+  - Extracts all consecutive headers at chunk start as `header_stack`
+  - Repeats header_stack in continuation chunks for context preservation
+  - Splits by list items, paragraphs, or sentences (priority order)
+  - Adds metadata: `continued_from_header`, `split_index`, `original_section_size`
+- **InvariantValidator Component**: New component for validating chunking quality
+  - Recall-based coverage metric (not inflated by repetition/overlap)
+  - Dangling header check for ALL levels 1-6
+  - Valid oversize reasons: `code_block_integrity`, `table_integrity`, `list_item_integrity`
+- **New Exports**: `SectionSplitter`, `InvariantValidator`, `InvariantValidationResult`
+- **Regression Tests**: 21 new tests for v2 critical fixes
+
+### Changed
+- **CRITICAL Pipeline Order Fix**: Dangling header fix now runs BEFORE section splitting
+  - This ensures headers are "attached" to content before any splitting occurs
+  - Split chunks can now properly repeat the header_stack
+- **HeaderProcessor Improvements**:
+  - Detection expanded from levels 3-6 to levels 2-6
+  - Threshold reduced from 50 to 30 characters
+  - Max iterations increased from 10 to 20
+  - Now uses `header_moved_from_id` (chunk_id) instead of `header_moved_from` (index) for stable tracking
+- **Removed `section_integrity` as valid oversize reason**: Text and list sections should be split, not marked as oversize
+  - Only `code_block_integrity`, `table_integrity`, `list_item_integrity` are now valid
+
+### Fixed
+- Fixed dangling headers in all sections (Scope, Impact, Leadership, Improvement, Technical Complexity)
+- Fixed max_chunk_size violations for text/list content (now properly split)
+- Fixed header context loss when splitting large sections
+
 ## [0.1.2] - 2026-01-05
 
 ### Added
