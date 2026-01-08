@@ -622,7 +622,7 @@ class SectionSplitter:
             continued = False
         else:
             content = body
-            continued = index > 0
+            continued = False  # No header_stack means no continuation
 
         # Copy and update metadata
         metadata = original.metadata.copy()
@@ -676,7 +676,7 @@ class SectionSplitter:
             continued = False
         else:
             content = body
-            continued = index > 0
+            continued = False  # No header_stack means no continuation
 
         # Copy and update metadata
         metadata = original.metadata.copy()
