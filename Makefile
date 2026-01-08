@@ -8,6 +8,7 @@ VENV := venv
 VENV_BIN := $(VENV)/bin
 VENV_PYTHON := $(VENV_BIN)/python
 VENV_PIP := $(VENV_BIN)/pip
+VENV_TWINE := $(VENV_BIN)/twine
 
 # Default target
 help:
@@ -115,3 +116,9 @@ clean-all: clean
 # Full setup from scratch
 all: clean-all install-dev test
 	@echo "Setup complete!"
+
+upload-test:
+	$(VENV_TWINE) upload --repository testpypi dist/*
+
+upload:
+	$(VENV_TWINE) upload dist/*

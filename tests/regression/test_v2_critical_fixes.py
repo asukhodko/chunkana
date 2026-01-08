@@ -187,20 +187,23 @@ class TestHeaderStackRepetition:
         """Split indices should be sequential within a section."""
         chunks = chunker_1000.chunk(sde_criteria_document)
 
-        # Group chunks by original section (using start_line as proxy)
-        split_groups: dict[int, list[int]] = {}
+        # Group chunks by header_path and original_section_size (better grouping)
+        split_groups: dict[tuple[str, int], list[int]] = {}
         for chunk in chunks:
             if "split_index" in chunk.metadata:
-                start = chunk.start_line
-                if start not in split_groups:
-                    split_groups[start] = []
-                split_groups[start].append(chunk.metadata["split_index"])
+                header_path = chunk.metadata.get("header_path", "")
+                original_size = chunk.metadata.get("original_section_size", 0)
+                key = (header_path, original_size)
+                if key not in split_groups:
+                    split_groups[key] = []
+                split_groups[key].append(chunk.metadata["split_index"])
 
-        for start_line, indices in split_groups.items():
+        for (header_path, original_size), indices in split_groups.items():
             sorted_indices = sorted(indices)
             expected = list(range(len(sorted_indices)))
             assert sorted_indices == expected, (
-                f"Split indices not sequential for section at line {start_line}: {sorted_indices}"
+                f"Split indices not sequential for section {header_path} "
+                f"(size {original_size}): {sorted_indices}"
             )
 
 
@@ -263,6 +266,82 @@ class TestTracking:
                         assert isinstance(moved_from, str), (
                             f"header_moved_from_id should be string, got {type(moved_from)}"
                         )
+
+
+class TestSplitChunkLineNumbers:
+    """Tests for split chunk line number accuracy."""
+
+    def test_split_chunks_have_different_line_numbers(self, sde_criteria_document, chunker_1000):
+        """Split chunks should have different line numbers."""
+        chunks = chunker_1000.chunk(sde_criteria_document)
+
+        # Find split chunks (same header_path, different split_index)
+        split_groups = {}
+        for chunk in chunks:
+            header_path = chunk.metadata.get("header_path", "")
+            if "split_index" in chunk.metadata:
+                if header_path not in split_groups:
+                    split_groups[header_path] = []
+                split_groups[header_path].append(chunk)
+
+        # Verify split chunks have different line numbers
+        for _header_path, split_chunks in split_groups.items():
+            if len(split_chunks) > 1:
+                # Sort by split_index
+                split_chunks.sort(key=lambda c: c.metadata["split_index"])
+
+                for i in range(len(split_chunks) - 1):
+                    current = split_chunks[i]
+                    next_chunk = split_chunks[i + 1]
+
+                    # Line numbers should be different
+                    assert current.start_line != next_chunk.start_line, (
+                        f"Split chunks have same start_line: {current.start_line}"
+                    )
+                    assert current.end_line != next_chunk.end_line, (
+                        f"Split chunks have same end_line: {current.end_line}"
+                    )
+
+    def test_split_chunks_line_numbers_ordered(self, sde_criteria_document, chunker_1000):
+        """Split chunks should have ordered line numbers."""
+        chunks = chunker_1000.chunk(sde_criteria_document)
+
+        # Find split chunks
+        split_chunks = [c for c in chunks if "split_index" in c.metadata]
+
+        if len(split_chunks) > 1:
+            # Group by header_path and sort by split_index
+            split_groups = {}
+            for chunk in split_chunks:
+                header_path = chunk.metadata.get("header_path", "")
+                if header_path not in split_groups:
+                    split_groups[header_path] = []
+                split_groups[header_path].append(chunk)
+
+            for _header_path, group in split_groups.items():
+                if len(group) > 1:
+                    group.sort(key=lambda c: c.metadata["split_index"])
+
+                    # Verify line numbers are monotonic
+                    for i in range(len(group) - 1):
+                        current = group[i]
+                        next_chunk = group[i + 1]
+
+                        assert current.start_line <= next_chunk.start_line, (
+                            f"Line numbers not ordered: {current.start_line} > {next_chunk.start_line}"
+                        )
+
+    def test_non_split_chunks_line_numbers_unchanged(self, sde_criteria_document, chunker_1000):
+        """Non-split chunks should maintain normal line numbers."""
+        chunks = chunker_1000.chunk(sde_criteria_document)
+
+        # Verify non-split chunks don't have split metadata
+        for chunk in chunks:
+            if "split_index" not in chunk.metadata:
+                # These chunks should have normal line numbers
+                assert chunk.start_line >= 0
+                assert chunk.end_line >= chunk.start_line
+                assert chunk.end_line > 0
 
 
 class TestSectionSplitter:

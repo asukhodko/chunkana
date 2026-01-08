@@ -10,6 +10,19 @@ v2.1 Changes:
 - Header stack extraction (all consecutive headers at chunk start)
 - Pack-until-full algorithm with header repetition
 - Proper metadata for continued chunks
+
+v2.2 Changes (Line Numbers Fix):
+- SegmentWithPosition dataclass for tracking segment positions
+- Accurate line number calculation for split chunks
+- _find_segments_with_positions() for position-aware segment finding
+- _create_chunk_with_lines() for accurate line number assignment
+- Line numbers reflect content-only (not including overlap)
+
+Line Number Semantics:
+- start_line: First line of chunk.content in original document
+- end_line: Last line of chunk.content in original document
+- Split chunks have different, ordered line numbers
+- Non-split chunks maintain original line numbers unchanged
 """
 
 import re
@@ -17,6 +30,16 @@ from dataclasses import dataclass
 
 from .config import ChunkConfig
 from .types import Chunk
+
+
+@dataclass
+class SegmentWithPosition:
+    """Segment with its position in the original document."""
+
+    content: str
+    start_line_offset: int  # Offset from original chunk start
+    end_line_offset: int  # Offset from original chunk start
+    original_text: str  # For debugging/validation
 
 
 @dataclass
@@ -90,6 +113,134 @@ class SectionSplitter:
 
         return True
 
+    def _find_segments_with_positions(
+        self, body: str, original: Chunk
+    ) -> list[SegmentWithPosition]:
+        """
+        Find segments with their line positions in the original document.
+
+        Strategy:
+        1. Split body into segments (existing logic)
+        2. For each segment, find its position in original content
+        3. Calculate line offsets from original.start_line
+
+        Args:
+            body: Body text (without header_stack)
+            original: Original chunk being split
+
+        Returns:
+            List of segments with position information
+        """
+        # Handle empty body (header-only chunks)
+        if not body.strip():
+            return []
+
+        # Use existing segment finding logic
+        segments = self._find_segments(body)
+
+        # Filter out empty segments
+        segments = [s for s in segments if s.strip()]
+
+        if len(segments) <= 1:
+            return []
+
+        # Calculate positions for segments
+        return self._calculate_segment_positions(segments, body, original)
+
+    def _calculate_segment_positions(
+        self, segments: list[str], body: str, original: Chunk
+    ) -> list[SegmentWithPosition]:
+        """
+        Calculate line positions for segments.
+
+        Algorithm:
+        1. Find body start line in original content
+        2. For each segment:
+           a. Find segment start position in body
+           b. Count lines from body start to segment start
+           c. Count lines in segment
+           d. Calculate absolute line numbers
+
+        Args:
+            segments: List of segment strings
+            body: Body text (without header_stack)
+            original: Original chunk being split
+
+        Returns:
+            List of segments with position information
+        """
+        result = []
+        body_start_line = self._find_body_start_line(original.content)
+
+        current_pos = 0
+        for i, segment in enumerate(segments):
+            # Find segment in body
+            segment_start = body.find(segment, current_pos)
+            if segment_start == -1:
+                # Fallback: use sequential positioning
+                if i == 0:
+                    segment_start = 0
+                else:
+                    # Estimate position based on previous segments
+                    prev_segments_length = sum(
+                        len(s) + 2 for s in segments[:i]
+                    )  # +2 for separators
+                    segment_start = min(prev_segments_length, len(body))
+
+            # Count lines from body start to segment start
+            lines_before = body[:segment_start].count("\n")
+            lines_in_segment = segment.count("\n")
+
+            # Calculate line offsets from original chunk start
+            start_line_offset = body_start_line + lines_before
+            end_line_offset = start_line_offset + lines_in_segment
+
+            result.append(
+                SegmentWithPosition(
+                    content=segment,
+                    start_line_offset=start_line_offset,
+                    end_line_offset=end_line_offset,
+                    original_text=segment,
+                )
+            )
+
+            current_pos = segment_start + len(segment)
+
+        return result
+
+    def _find_body_start_line(self, content: str) -> int:
+        """
+        Find the line offset where body starts in original content.
+
+        Body starts after all consecutive headers at the beginning.
+
+        Args:
+            content: Original chunk content
+
+        Returns:
+            Line offset from content start where body begins
+        """
+        lines = content.split("\n")
+        body_start_idx = 0
+        in_header_section = True
+
+        for i, line in enumerate(lines):
+            stripped = line.strip()
+
+            if not stripped:
+                # Empty line - continue if we're still in header section
+                continue
+
+            if stripped.startswith("#") and in_header_section:
+                body_start_idx = i + 1
+            else:
+                # First non-header, non-empty line - end of header section
+                in_header_section = False
+                body_start_idx = i
+                break
+
+        return body_start_idx
+
     def _is_atomic_block(self, chunk: Chunk) -> bool:
         """Check if chunk is an atomic block (code or table)."""
         content_type = chunk.metadata.get("content_type", "")
@@ -114,13 +265,13 @@ class SectionSplitter:
 
     def _split_chunk(self, chunk: Chunk) -> list[Chunk]:
         """
-        Split a chunk with header_stack repetition.
+        Split a chunk with header_stack repetition and accurate line numbers.
 
         Args:
             chunk: Chunk to split
 
         Returns:
-            List of split chunks
+            List of split chunks with accurate line numbers
         """
         header_stack, body = self._extract_header_stack_and_body(chunk.content)
 
@@ -128,15 +279,17 @@ class SectionSplitter:
             # No body to split, return original
             return [chunk]
 
-        segments = self._find_segments(body)
+        segments_with_positions = self._find_segments_with_positions(body, chunk)
 
-        if len(segments) <= 1:
+        if len(segments_with_positions) <= 1:
             # Cannot split further, mark as oversize
             chunk.metadata["allow_oversize"] = True
             chunk.metadata["oversize_reason"] = "list_item_integrity"
             return [chunk]
 
-        return self._pack_segments_into_chunks(chunk, header_stack, segments)
+        return self._pack_segments_into_chunks_with_lines(
+            chunk, header_stack, segments_with_positions
+        )
 
     def _extract_header_stack_and_body(self, content: str) -> tuple[str, str]:
         """
@@ -268,6 +421,83 @@ class SectionSplitter:
         sentences = re.split(r"(?<=[.!?])\s+", body)
         return [s.strip() for s in sentences if s.strip()]
 
+    def _pack_segments_into_chunks_with_lines(
+        self, original: Chunk, header_stack: str, segments: list[SegmentWithPosition]
+    ) -> list[Chunk]:
+        """
+        Pack segments into chunks with header_stack repetition and accurate line numbers.
+
+        Algorithm "pack until full":
+        1. Accumulate segments while they fit
+        2. When next segment doesn't fit, create chunk and start new one
+        3. Each chunk (except first) starts with header_stack
+
+        Args:
+            original: Original chunk being split
+            header_stack: Headers to repeat in continuation chunks
+            segments: List of segments with positions to pack
+
+        Returns:
+            List of packed chunks with accurate line numbers
+        """
+        # Calculate available space for body
+        header_size = len(header_stack) + 2 if header_stack else 0  # +2 for \n\n
+        max_body_size = self.config.max_chunk_size - header_size
+
+        # Ensure we have reasonable space for body
+        if max_body_size < 100:
+            max_body_size = self.config.max_chunk_size // 2
+
+        chunks: list[Chunk] = []
+        current_segments: list[SegmentWithPosition] = []
+        current_size = 0
+        chunk_index = 0
+
+        for segment in segments:
+            segment_size = len(segment.content) + 2  # +2 for separator
+
+            # Check if segment fits in current chunk
+            if current_size + segment_size <= max_body_size:
+                current_segments.append(segment)
+                current_size += segment_size
+            else:
+                # Create chunk from accumulated segments
+                if current_segments:
+                    chunks.append(
+                        self._create_chunk_with_lines(
+                            original, header_stack, current_segments, chunk_index
+                        )
+                    )
+                    chunk_index += 1
+
+                # Start new chunk with this segment
+                if segment_size <= max_body_size:
+                    current_segments = [segment]
+                    current_size = segment_size
+                else:
+                    # Segment too large - create oversize chunk
+                    chunks.append(
+                        self._create_chunk_with_lines(
+                            original,
+                            header_stack,
+                            [segment],
+                            chunk_index,
+                            allow_oversize=True,
+                            oversize_reason="list_item_integrity",
+                        )
+                    )
+                    chunk_index += 1
+                    current_segments = []
+                    current_size = 0
+
+        # Create final chunk from remaining segments
+        if current_segments:
+            chunks.append(
+                self._create_chunk_with_lines(original, header_stack, current_segments, chunk_index)
+            )
+
+        return chunks if chunks else [original]
+
     def _pack_segments_into_chunks(
         self, original: Chunk, header_stack: str, segments: list[str]
     ) -> list[Chunk]:
@@ -340,6 +570,76 @@ class SectionSplitter:
             chunks.append(self._create_chunk(original, header_stack, current_segments, chunk_index))
 
         return chunks if chunks else [original]
+
+    def _create_chunk_with_lines(
+        self,
+        original: Chunk,
+        header_stack: str,
+        segments: list[SegmentWithPosition],
+        index: int,
+        allow_oversize: bool = False,
+        oversize_reason: str = "",
+    ) -> Chunk:
+        """
+        Create chunk with accurate line numbers.
+
+        Line number calculation:
+        - start_line: First segment's start_line
+        - end_line: Last segment's end_line
+        - Accounts for header_stack repetition in continuation chunks
+
+        Args:
+            original: Original chunk being split
+            header_stack: Headers to prepend (for continuation chunks)
+            segments: Body segments with position info for this chunk
+            index: Split index (0 = first chunk)
+            allow_oversize: Whether to mark as oversize
+            oversize_reason: Reason for oversize
+
+        Returns:
+            New Chunk with accurate line numbers
+        """
+        if not segments:
+            return original
+
+        # Calculate content line range
+        start_line_offset = min(seg.start_line_offset for seg in segments)
+        end_line_offset = max(seg.end_line_offset for seg in segments)
+
+        # Calculate absolute line numbers
+        start_line = original.start_line + start_line_offset
+        end_line = original.start_line + end_line_offset
+
+        # Build content
+        body = "\n\n".join(seg.content for seg in segments)
+        if header_stack and index > 0:
+            # Continuation chunk - repeat header_stack
+            content = f"{header_stack}\n\n{body}"
+            continued = True
+        elif header_stack:
+            # First chunk - header_stack already present
+            content = f"{header_stack}\n\n{body}"
+            continued = False
+        else:
+            content = body
+            continued = index > 0
+
+        # Copy and update metadata
+        metadata = original.metadata.copy()
+        metadata["continued_from_header"] = continued
+        metadata["split_index"] = index
+        metadata["original_section_size"] = len(original.content)
+
+        if allow_oversize:
+            metadata["allow_oversize"] = True
+            metadata["oversize_reason"] = oversize_reason
+
+        return Chunk(
+            content=content,
+            start_line=start_line,
+            end_line=end_line,
+            metadata=metadata,
+        )
 
     def _create_chunk(
         self,

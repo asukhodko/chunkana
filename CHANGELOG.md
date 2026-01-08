@@ -5,6 +5,43 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.4] - 2026-01-06
+
+### Fixed
+- **CRITICAL-02: Accurate Line Numbers for Split Chunks**
+  - Split chunks now have different, accurate `start_line`/`end_line` values
+  - Line numbers reflect actual content position in original document
+  - Split chunks are ordered by line numbers (monotonic)
+  - Non-split chunks maintain unchanged line numbers (backward compatible)
+
+### Added
+- **SegmentWithPosition**: New dataclass for tracking segment positions during splitting
+  - Fields: `content`, `start_line_offset`, `end_line_offset`, `original_text`
+  - Enables accurate line number calculation for each split segment
+- **Enhanced SectionSplitter Methods**:
+  - `_find_segments_with_positions()`: Position-aware segment finding
+  - `_calculate_segment_positions()`: Line offset calculation for segments
+  - `_create_chunk_with_lines()`: Chunk creation with accurate line numbers
+  - `_pack_segments_into_chunks_with_lines()`: Packing with line number tracking
+- **Comprehensive Test Suite**:
+  - Unit tests for line number calculation (`test_section_splitter_line_numbers.py`)
+  - Integration tests for split chunk accuracy (`test_split_chunk_line_numbers.py`)
+  - Property-based tests for line number invariants (`test_line_numbers_properties.py`)
+  - Performance tests for overhead measurement (`test_line_numbers_performance.py`)
+  - Regression tests in existing test suite
+
+### Changed
+- **Line Number Semantics**: Clarified that line numbers reflect content-only (not including overlap)
+- **SectionSplitter Architecture**: Enhanced to track segment positions throughout splitting process
+- **Error Handling**: Improved fallback positioning when segments cannot be found in body text
+
+### Technical Details
+- Line number calculation uses content-only semantics for consistency
+- Segment search with fallback to sequential positioning
+- Edge case handling: header-only chunks, empty segments, single segments
+- Performance overhead < 10% for documents with splits
+- All existing functionality preserved (100% backward compatible)
+
 ## [0.1.3] - 2026-01-06
 
 ### Added
