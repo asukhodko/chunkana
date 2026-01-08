@@ -2,14 +2,14 @@
 
 Chunkana automatically selects the best strategy based on document content analysis.
 
-## Strategy Selection Order
+## Strategy selection order
 
 1. **CodeAware** (priority 1) — documents with code blocks or tables
 2. **ListAware** (priority 2) — list-heavy documents
 3. **Structural** (priority 3) — documents with hierarchical headers
 4. **Fallback** (priority 4) — universal fallback
 
-## CodeAware Strategy
+## CodeAware strategy
 
 Selected when:
 - `code_block_count >= 1`, OR
@@ -23,7 +23,9 @@ Features:
 - Binds code blocks to surrounding explanations (if enabled)
 - Groups related code blocks (before/after pairs, code/output)
 
-## ListAware Strategy
+Best for: technical docs, API guides, tutorials, Markdown with fenced code.
+
+## ListAware strategy
 
 Selected when (for non-structural documents):
 - `list_ratio > list_ratio_threshold` (default 0.4), OR
@@ -37,7 +39,9 @@ Features:
 - Groups related list items
 - Handles checkbox lists with stats
 
-## Structural Strategy
+Best for: checklists, release notes, handbooks, policy docs.
+
+## Structural strategy
 
 Selected when:
 - `header_count >= structure_threshold` (default 3), AND
@@ -49,7 +53,9 @@ Features:
 - Handles preamble (content before first header)
 - Preserves atomic blocks within sections
 
-## Fallback Strategy
+Best for: Markdown with clear H1/H2/H3 structure (docs, READMEs).
+
+## Fallback strategy
 
 Always available as last resort.
 
@@ -58,7 +64,9 @@ Features:
 - Groups paragraphs to fit `max_chunk_size`
 - Preserves atomic blocks if present
 
-## Forcing a Strategy
+Best for: unstructured or minimal Markdown.
+
+## Forcing a strategy
 
 ```python
 from chunkana import chunk_markdown, ChunkerConfig
@@ -70,7 +78,7 @@ chunks = chunk_markdown(text, config)
 
 Valid values: `"code_aware"`, `"list_aware"`, `"structural"`, `"fallback"`
 
-## Strategy in Metadata
+## Strategy in metadata
 
 Each chunk includes the strategy used:
 

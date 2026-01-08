@@ -10,7 +10,7 @@ Install Chunkana in your n8n Python environment:
 pip install chunkana
 ```
 
-## Code Node Example
+## Code node example
 
 ```python
 from chunkana import chunk_markdown
@@ -18,20 +18,20 @@ from chunkana.renderers import render_json
 
 def process(items):
     results = []
-    
+
     for item in items:
         text = item.get("text", "")
         chunks = chunk_markdown(text)
-        
+
         results.append({
             "chunks": render_json(chunks),
             "chunk_count": len(chunks),
         })
-    
+
     return results
 ```
 
-## With Configuration
+## With configuration
 
 ```python
 from chunkana import chunk_markdown, ChunkerConfig
@@ -44,19 +44,19 @@ config = ChunkerConfig(
 
 def process(items):
     results = []
-    
+
     for item in items:
         text = item.get("text", "")
         chunks = chunk_markdown(text, config)
-        
+
         results.append({
             "chunks": render_json(chunks),
         })
-    
+
     return results
 ```
 
-## Output Format
+## Output format
 
 Each chunk in `render_json()` output:
 
@@ -76,7 +76,7 @@ Each chunk in `render_json()` output:
 }
 ```
 
-## Streaming Large Documents
+## Streaming large documents
 
 For large documents, use streaming:
 
@@ -87,14 +87,14 @@ chunker = MarkdownChunker()
 
 def process_large(items):
     results = []
-    
+
     for item in items:
         file_path = item.get("file_path")
         chunks = list(chunker.chunk_file_streaming(file_path))
-        
+
         results.append({
             "chunks": [c.to_dict() for c in chunks],
         })
-    
+
     return results
 ```

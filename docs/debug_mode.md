@@ -2,11 +2,11 @@
 
 ## Overview
 
-This document describes the metadata behavior in chunkana across different chunking modes.
+This document describes the metadata behavior in Chunkana across different chunking modes.
 
-## Metadata Behavior
+## Metadata behavior
 
-### Standard Chunking Mode
+### Standard chunking mode
 
 When using `chunker.chunk(document)`, chunks contain:
 
@@ -15,8 +15,9 @@ When using `chunker.chunk(document)`, chunks contain:
 - `header_level`: Level of the header (1-6)
 - `chunk_index`: Position in the chunk list
 - `strategy`: Chunking strategy used
+- `previous_content` / `next_content`: Overlap content in metadata (if overlap enabled)
 
-### Hierarchical Chunking Mode
+### Hierarchical chunking mode
 
 When using `chunker.chunk_hierarchical(document)`, chunks contain additional metadata:
 
@@ -30,7 +31,7 @@ When using `chunker.chunk_hierarchical(document)`, chunks contain additional met
 - `prev_sibling_id`: ID of previous sibling (if any)
 - `next_sibling_id`: ID of next sibling (if any)
 
-## Hierarchical Mode Specifics
+## Hierarchical mode specifics
 
 ### get_flat_chunks()
 
@@ -42,13 +43,13 @@ The `get_flat_chunks()` method returns chunks suitable for flat retrieval:
 
 This ensures no content is lost when using flat retrieval mode.
 
-### Navigation Methods
+### Navigation methods
 
 Navigation methods (`get_parent()`, `get_children()`, `get_siblings()`, `get_ancestors()`) work in hierarchical mode using internal chunk IDs.
 
 ## Examples
 
-### Basic Usage
+### Basic usage
 
 ```python
 from chunkana import MarkdownChunker, ChunkConfig
@@ -59,7 +60,7 @@ chunker = MarkdownChunker(config)
 chunks = chunker.chunk(document)
 ```
 
-### Hierarchical Mode
+### Hierarchical mode
 
 ```python
 # Hierarchical chunking
@@ -78,7 +79,7 @@ root = result.get_chunk(result.root_id)
 children = result.get_children(result.root_id)
 ```
 
-## Invariant Validation
+## Invariant validation
 
 Enable invariant validation to catch tree structure issues:
 
@@ -91,7 +92,7 @@ config = ChunkConfig(
 )
 ```
 
-### Validated Invariants
+### Validated invariants
 
 1. **is_leaf consistency**: `is_leaf` equals `(children_ids is empty)`
 2. **Parent-child bidirectionality**: Parent-child relationships are mutual
