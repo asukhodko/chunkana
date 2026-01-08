@@ -11,7 +11,7 @@ Add `chunkana` to your script dependencies:
 #chunkana
 ```
 
-## Basic Script
+## Basic script
 
 ```python
 #requirements:
@@ -22,14 +22,14 @@ from chunkana.renderers import render_json
 
 def main(text: str) -> dict:
     chunks = chunk_markdown(text)
-    
+
     return {
         "chunks": render_json(chunks),
         "count": len(chunks),
     }
 ```
 
-## With Configuration
+## With configuration
 
 ```python
 #requirements:
@@ -47,16 +47,16 @@ def main(
         max_chunk_size=max_chunk_size,
         overlap_size=overlap_size,
     )
-    
+
     chunks = chunk_markdown(text, config)
-    
+
     return {
         "chunks": render_json(chunks),
         "count": len(chunks),
     }
 ```
 
-## Processing Files
+## Processing files
 
 ```python
 #requirements:
@@ -68,7 +68,7 @@ from chunkana.renderers import render_json
 def main(file_content: str) -> dict:
     chunker = MarkdownChunker()
     chunks = chunker.chunk(file_content)
-    
+
     return {
         "chunks": render_json(chunks),
         "metadata": {
@@ -78,7 +78,7 @@ def main(file_content: str) -> dict:
     }
 ```
 
-## Hierarchical Output
+## Hierarchical output
 
 ```python
 #requirements:
@@ -89,7 +89,7 @@ from chunkana import MarkdownChunker
 def main(text: str) -> dict:
     chunker = MarkdownChunker()
     result = chunker.chunk_hierarchical(text)
-    
+
     return {
         "tree": result.to_tree_dict(),
         "flat_chunks": [c.to_dict() for c in result.get_flat_chunks()],
@@ -97,7 +97,7 @@ def main(text: str) -> dict:
     }
 ```
 
-## Error Handling
+## Error handling
 
 ```python
 #requirements:
@@ -108,7 +108,7 @@ from chunkana import chunk_markdown
 def main(text: str) -> dict:
     if not text or not text.strip():
         return {"chunks": [], "error": None}
-    
+
     try:
         chunks = chunk_markdown(text)
         return {

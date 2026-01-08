@@ -2,7 +2,7 @@
 
 Chunkana uses `ChunkerConfig` (alias: `ChunkConfig`) to control chunking behavior.
 
-## Basic Parameters
+## Basic parameters
 
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
@@ -12,7 +12,7 @@ Chunkana uses `ChunkerConfig` (alias: `ChunkConfig`) to control chunking behavio
 | `preserve_atomic_blocks` | bool | True | Keep code blocks, tables, LaTeX intact |
 | `extract_preamble` | bool | True | Extract content before first header as preamble |
 
-## Strategy Selection Thresholds
+## Strategy selection thresholds
 
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
@@ -20,9 +20,9 @@ Chunkana uses `ChunkerConfig` (alias: `ChunkConfig`) to control chunking behavio
 | `structure_threshold` | int | 3 | Minimum headers for Structural strategy |
 | `list_ratio_threshold` | float | 0.4 | List content ratio for ListAware strategy |
 | `list_count_threshold` | int | 5 | Minimum lists for ListAware strategy |
-| `strategy_override` | str\|None | None | Force specific strategy: "code_aware", "list_aware", "structural", "fallback" |
+| `strategy_override` | str\|None | None | Force strategy: "code_aware", "list_aware", "structural", "fallback" |
 
-## Code-Context Binding
+## Code-context binding
 
 These parameters control how code blocks are bound to surrounding explanations:
 
@@ -35,7 +35,7 @@ These parameters control how code blocks are bound to surrounding explanations:
 | `bind_output_blocks` | bool | True | Bind code with its output blocks |
 | `preserve_before_after_pairs` | bool | True | Keep before/after code pairs together |
 
-## Adaptive Sizing
+## Adaptive sizing
 
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
@@ -55,7 +55,7 @@ adaptive_config = AdaptiveSizeConfig(
 )
 ```
 
-## Table Grouping
+## Table grouping
 
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
@@ -73,7 +73,7 @@ table_config = TableGroupingConfig(
 )
 ```
 
-## Overlap Behavior
+## Overlap behavior
 
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
@@ -82,7 +82,7 @@ table_config = TableGroupingConfig(
 
 The overlap is stored in metadata (`previous_content`, `next_content`), not embedded in `chunk.content`.
 
-## LaTeX Handling
+## LaTeX handling
 
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
@@ -90,13 +90,13 @@ The overlap is stored in metadata (`previous_content`, `next_content`), not embe
 
 When enabled, LaTeX blocks (`$$...$$`, `\[...\]`, `\begin{...}...\end{...}`) are treated as atomic units.
 
-## Computed Fields
+## Computed fields
 
 | Field | Description |
 |-------|-------------|
 | `enable_overlap` | Computed as `overlap_size > 0` |
 
-## Factory Methods
+## Factory methods
 
 ```python
 from chunkana import ChunkerConfig
@@ -120,9 +120,19 @@ config = ChunkerConfig.from_dict(config_dict)
 
 Round-trip is guaranteed: `ChunkerConfig.from_dict(config.to_dict()) == config`
 
-## Example Configurations
+## Recommended presets
 
-### Documentation Sites
+### RAG pipelines
+
+```python
+config = ChunkerConfig(
+    max_chunk_size=4096,
+    min_chunk_size=512,
+    overlap_size=200,
+)
+```
+
+### Documentation sites
 
 ```python
 config = ChunkerConfig(
@@ -133,7 +143,7 @@ config = ChunkerConfig(
 )
 ```
 
-### Code Repositories
+### Code repositories
 
 ```python
 config = ChunkerConfig(
@@ -145,7 +155,7 @@ config = ChunkerConfig(
 )
 ```
 
-### Changelogs / Release Notes
+### Changelogs / release notes
 
 ```python
 config = ChunkerConfig(
@@ -156,7 +166,7 @@ config = ChunkerConfig(
 )
 ```
 
-### Scientific Documents (LaTeX)
+### Scientific documents (LaTeX)
 
 ```python
 config = ChunkerConfig(
@@ -166,6 +176,6 @@ config = ChunkerConfig(
 )
 ```
 
-## Plugin Compatibility
+## Plugin compatibility
 
 All 17 fields from dify-markdown-chunker's `ChunkConfig` are supported. See [Parity Matrix](migration/parity_matrix.md) for details.

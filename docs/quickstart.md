@@ -8,7 +8,7 @@ Get started with Chunkana in under a minute.
 pip install chunkana
 ```
 
-## Basic Usage
+## Basic usage
 
 ```python
 from chunkana import chunk_markdown
@@ -33,7 +33,7 @@ for chunk in chunks:
     print(f"Lines {chunk.start_line}-{chunk.end_line}: {chunk.content[:50]}...")
 ```
 
-## With Custom Configuration
+## With custom configuration
 
 ```python
 from chunkana import chunk_markdown, ChunkerConfig
@@ -47,7 +47,33 @@ config = ChunkerConfig(
 chunks = chunk_markdown(text, config)
 ```
 
-## Rendering Output
+## Hierarchical chunking
+
+```python
+from chunkana import MarkdownChunker, ChunkConfig
+
+chunker = MarkdownChunker(ChunkConfig(validate_invariants=True))
+result = chunker.chunk_hierarchical(text)
+
+# Leaf + significant parent chunks
+flat_chunks = result.get_flat_chunks()
+
+# Navigate the hierarchy
+root = result.get_chunk(result.root_id)
+children = result.get_children(result.root_id)
+```
+
+## Streaming large documents
+
+```python
+from chunkana import MarkdownChunker
+
+chunker = MarkdownChunker()
+for chunk in chunker.chunk_file_streaming("docs/handbook.md"):
+    print(chunk.metadata["chunk_index"], chunk.size)
+```
+
+## Rendering output
 
 ```python
 from chunkana import chunk_markdown
@@ -62,8 +88,10 @@ json_output = render_json(chunks)
 dify_output = render_dify_style(chunks)
 ```
 
-## Next Steps
+## Next steps
 
-- [Configuration Guide](config.md) — all configuration options
-- [Strategies](strategies.md) — how chunking strategies work
-- [Renderers](renderers.md) — output formatting options
+- [Overview](overview.md)
+- [Configuration Guide](config.md)
+- [Strategies](strategies.md)
+- [Renderers](renderers.md)
+- [Integrations](integrations/dify.md)

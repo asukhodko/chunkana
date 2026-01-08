@@ -1,8 +1,8 @@
 # Renderers
 
-Renderers format chunk output without modifying the original chunks.
+Renderers format chunk output without modifying the original chunks. Use them to emit Dify-compatible strings, JSON, or inline metadata for debugging.
 
-## Available Renderers
+## Available renderers
 
 ### render_dify_style
 
@@ -77,7 +77,7 @@ output = render_inline_metadata(chunks)
 
 Keys are sorted alphabetically for deterministic output.
 
-## Renderer Selection Guide
+## Renderer selection guide
 
 | Use Case | Renderer |
 |----------|----------|
@@ -88,7 +88,7 @@ Keys are sorted alphabetically for deterministic output.
 | RAG with sliding window | `render_with_prev_overlap` |
 | Debugging / inspection | `render_inline_metadata` |
 
-## Decision Tree
+## Decision tree
 
 ```
 Need output for Dify plugin?
@@ -101,7 +101,7 @@ Need output for Dify plugin?
     └── Need inline metadata → render_inline_metadata()
 ```
 
-## Important Notes
+## Important notes
 
 1. **Renderers don't modify chunks** — they only format output
 2. **Overlap is in metadata** — `chunk.content` is always canonical (no embedded overlap)
@@ -109,7 +109,7 @@ Need output for Dify plugin?
 4. **Empty overlap handled** — missing `previous_content`/`next_content` is fine
 5. **Deterministic** — same input always produces same output
 
-## Custom Rendering
+## Custom rendering
 
 For custom formats, access chunk data directly:
 
@@ -121,11 +121,11 @@ for chunk in chunks:
     prev = chunk.metadata.get("previous_content", "")
     next_ = chunk.metadata.get("next_content", "")
     chunk_id = chunk.metadata.get("chunk_id", "")
-    
+
     # Your custom formatting here
 ```
 
-## Plugin Compatibility
+## Plugin compatibility
 
 | Plugin Parameter | Chunkana Renderer |
 |------------------|-------------------|
