@@ -14,6 +14,7 @@ USP: Structure-preserving chunking with rich metadata in a single pass.
 - [Installation](#installation)
 - [Quickstart](#quickstart)
 - [Overview](#overview)
+- [Why Chunkana](#why-chunkana)
 - [Key Features](#key-features)
 - [Supported Markdown constructs](#supported-markdown-constructs)
 - [Requirements](#requirements)
@@ -81,6 +82,28 @@ for chunk in chunks:
 **Chunkana** turns complex Markdown into retrieval-ready chunks for RAG and LLM ingestion without breaking structure. It preserves headers, code blocks, tables, and math so your context windows stay coherent. It also emits rich metadata so indexing, search, and reranking stay accurate.
 
 Chunkana is a high-precision Markdown chunking library for RAG pipelines, search indexing, and LLM ingestion. It keeps semantic boundaries intact so downstream retrieval stays faithful to the original document. It is built for teams that need structure-preserving chunks at scale without custom parsers.
+
+## Why Chunkana
+
+### Concrete differentiators
+
+- **Semantic guarantees**: never splits atomic structures (headers, lists, code fences, tables, LaTeX blocks) so each chunk stays valid and retrievable.
+- **RAG metadata first**: every chunk carries header paths, line ranges, content type, overlap context, and strategy hints for filtering and ranking.
+- **dify-markdown-chunker compatibility**: renderers emit Dify-style payloads without rewriting your ingestion pipeline.
+- **Adaptive strategies**: auto-selects structure-, list-, or code-aware strategies to keep mixed documents coherent.
+
+### Problem → Solution
+
+- **Naive splitter breaks code fences** → **Chunkana keeps code blocks atomic and binds nearby context.**
+- **Tables get fragmented and lose headers** → **Chunkana preserves tables as single semantic units.**
+- **Lists lose hierarchy** → **Chunkana respects nested list structure.**
+- **Math/LaTeX gets split mid-formula** → **Chunkana keeps formulas intact for retrieval.**
+
+### Practical defaults & limits
+
+- **Chunk size defaults**: `max_chunk_size=4096`, `min_chunk_size=512`.
+- **Overlap metadata**: `overlap_size=200` characters, capped to 35% of adjacent chunk size for consistency.
+- **Large-file throughput**: streaming APIs process multi-megabyte Markdown without loading everything into memory.
 
 ### Project Status / Compatibility / Support
 
