@@ -340,6 +340,9 @@ Follow these guides to go from first chunk to production-ready ingestion.
 Each link highlights a focused capability you can adopt incrementally.
 
 - [Overview](docs/overview.md)
+- [Documentation Index](docs/index.md)
 - [Quick Start](docs/quickstart.md)
 - [Configuration](docs/config.md)
 - [Renderers](docs/renderers.md)
+- [Metadata reference](docs/metadata.md)
+- [Errors & troubleshooting](docs/errors.md)
