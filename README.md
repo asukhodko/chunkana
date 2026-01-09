@@ -1,20 +1,26 @@
 # Chunkana
 
+Chunkana is a semantic Markdown chunker that turns documents into retrieval-ready chunks for RAG and LLM pipelines.
+USP: Structure-preserving chunking with rich metadata in a single pass.
+
 [![GitHub Repository](https://img.shields.io/badge/GitHub-Chunkana-181717?logo=github)](https://github.com/asukhodko/chunkana)
 [![PyPI version](https://img.shields.io/pypi/v/chunkana.svg)](https://pypi.org/project/chunkana/)
 [![Python versions](https://img.shields.io/pypi/pyversions/chunkana.svg)](https://pypi.org/project/chunkana/)
 [![License](https://img.shields.io/pypi/l/chunkana.svg)](LICENSE)
 [![Downloads](https://img.shields.io/pypi/dm/chunkana.svg)](https://pypi.org/project/chunkana/)
 
-**Chunkana** turns complex Markdown into retrieval-ready chunks for RAG and LLM ingestion without breaking structure. It preserves headers, code blocks, tables, and math so your context windows stay coherent. It also emits rich metadata so indexing, search, and reranking stay accurate.
-
 ## Table of Contents
 
-- [Overview](#overview)
-- [Key Features](#key-features)
-- [Use Cases](#use-cases)
 - [Installation](#installation)
 - [Quickstart](#quickstart)
+- [Overview](#overview)
+- [Key Features](#key-features)
+- [Supported Markdown constructs](#supported-markdown-constructs)
+- [Requirements](#requirements)
+- [Output/Metadata schema](#outputmetadata-schema)
+- [Performance/Scalability](#performancescalability)
+- [Compatibility](#compatibility)
+- [Use Cases](#use-cases)
 - [Core Concepts](#core-concepts)
 - [Examples](#examples)
 - [Configuration](#configuration)
@@ -24,32 +30,6 @@
 - [Contributing](#contributing)
 - [License](#license)
 - [Links](#links)
-
-## Overview
-
-Chunkana is a high-precision Markdown chunking library for RAG pipelines, search indexing, and LLM ingestion. It keeps semantic boundaries intact so downstream retrieval stays faithful to the original document. It is built for teams that need structure-preserving chunks at scale without custom parsers.
-
-### Project Status / Compatibility / Support
-
-- **Stability:** Beta (actively maintained, APIs may evolve as features land).
-- **Python:** 3.12+ supported.
-- **Support:** Please report issues or feature requests in the [GitHub issue tracker](https://github.com/asukhodko/chunkana/issues).
-
-## Key Features
-
-- **Semantic correctness**: preserves headers, lists, tables, code blocks, and LaTeX without splitting mid-block.
-- **RAG-ready metadata**: header paths, content types, line ranges, and overlap context for retrieval.
-- **Smart strategy selection**: adapts to code-heavy, list-heavy, or structural documents automatically.
-- **Hierarchical navigation**: build a chunk tree for section-aware retrieval and summarization.
-- **Streaming for large files**: chunk multi-megabyte documents without loading everything into memory.
-- **Compatibility**: output formats for Dify and JSON APIs.
-
-## Use Cases
-
-- **RAG ingestion** for product docs, handbooks, and knowledge bases where structure matters.
-- **LLM context window prep** for chatbots that need clean, scoped sections.
-- **Search indexing** with metadata-rich chunks for precise filtering and ranking.
-- **Markdown preservation** when your pipeline must keep headings, lists, and code intact.
 
 ## Installation
 
@@ -95,6 +75,87 @@ chunks = chunk_markdown(text)
 for chunk in chunks:
     print(f"{chunk.start_line}-{chunk.end_line}: {chunk.metadata['header_path']}")
 ```
+
+## Overview
+
+**Chunkana** turns complex Markdown into retrieval-ready chunks for RAG and LLM ingestion without breaking structure. It preserves headers, code blocks, tables, and math so your context windows stay coherent. It also emits rich metadata so indexing, search, and reranking stay accurate.
+
+Chunkana is a high-precision Markdown chunking library for RAG pipelines, search indexing, and LLM ingestion. It keeps semantic boundaries intact so downstream retrieval stays faithful to the original document. It is built for teams that need structure-preserving chunks at scale without custom parsers.
+
+### Project Status / Compatibility / Support
+
+- **Stability:** Beta (actively maintained, APIs may evolve as features land).
+- **Support:** Please report issues or feature requests in the [GitHub issue tracker](https://github.com/asukhodko/chunkana/issues).
+
+## Key Features
+
+- **Semantic correctness**: preserves headers, lists, tables, code blocks, and LaTeX without splitting mid-block.
+- **RAG-ready metadata**: header paths, content types, line ranges, and overlap context for retrieval.
+- **Smart strategy selection**: adapts to code-heavy, list-heavy, or structural documents automatically.
+- **Hierarchical navigation**: build a chunk tree for section-aware retrieval and summarization.
+- **Streaming for large files**: chunk multi-megabyte documents without loading everything into memory.
+- **Compatibility**: output formats for Dify and JSON APIs.
+
+## Supported Markdown constructs
+
+- Headings and nested section structure.
+- Ordered/unordered lists and nested list blocks.
+- Fenced code blocks and inline code spans.
+- Tables and mixed content (text + tables).
+- LaTeX math (inline and block).
+
+## Requirements
+
+- Python **3.12+**
+- Recommended: `pip install chunkana` (optional docs extras: `pip install "chunkana[docs]"`).
+
+## Output/Metadata schema
+
+Chunks are returned as `Chunk` objects or renderer-specific formats (JSON, Dify, inline metadata).
+Core fields follow this shape:
+
+```json
+{
+  "content": "Markdown content...",
+  "start_line": 1,
+  "end_line": 42,
+  "size": 1234,
+  "line_count": 42,
+  "metadata": {
+    "chunk_index": 0,
+    "content_type": "section",
+    "header_path": "/Intro/Overview",
+    "header_level": 2,
+    "strategy": "structural",
+    "has_code": false,
+    "sub_headers": ["Details"],
+    "previous_content": "...",
+    "next_content": "...",
+    "overlap_size": 200,
+    "small_chunk": false,
+    "small_chunk_reason": "cannot_merge"
+  }
+}
+```
+
+## Performance/Scalability
+
+- Stream large files without full-memory loads via `chunk_file_streaming()` or `chunk_stream()`.
+- Adaptive strategy selection keeps chunking stable on code-heavy or list-heavy documents.
+- Overlap metadata supports sliding-window retrieval without duplicating content.
+
+## Compatibility
+
+- [Dify](docs/integrations/dify.md): renderer parity for plugin ingestion.
+- [n8n](docs/integrations/n8n.md): automation-friendly pipelines.
+- [Windmill](docs/integrations/windmill.md): data workflows and batch jobs.
+
+## Use Cases
+
+- **RAG ingestion** for product docs, handbooks, and knowledge bases where structure matters.
+- **LLM context window prep** for chatbots that need clean, scoped sections.
+- **Search indexing** with metadata-rich chunks for precise filtering and ranking.
+- **Markdown preservation** when your pipeline must keep headings, lists, and code intact.
 
 ## Core Concepts
 
