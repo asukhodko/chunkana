@@ -23,7 +23,7 @@ USP: Structure-preserving chunking with rich metadata in a single pass.
 - [Compatibility](#compatibility)
 - [Use Cases](#use-cases)
 - [Core Concepts](#core-concepts)
-- [Examples](#examples)
+- [Usage examples](#usage-examples)
 - [Configuration](#configuration)
 - [Renderers](#renderers)
 - [Integrations](#integrations)
@@ -186,48 +186,14 @@ Core fields follow this shape:
 - **Metadata**: header paths, content type, and line ranges to power retrieval and filtering.
 - **Hierarchy**: optional tree structure for section-aware navigation and summaries.
 
-## Examples
+## Usage examples
 
 Use these patterns to scale from simple chunking to rich retrieval pipelines.
 Each example shows a focused capability you can drop into production quickly.
 
-### 1) RAG pipeline with JSON rendering + metadata
+### 1) Streaming for large documents (memory-safe)
 
-**Why this matters:** keep `header_path` and `strategy` for filtering/ranking in RAG indexes.
-
-```python
-from chunkana import chunk_markdown
-from chunkana.renderers import render_json
-
-chunks = chunk_markdown(text)
-payload = render_json(chunks)
-
-for item in payload:
-    print(item["metadata"]["header_path"], item["metadata"]["strategy"])
-```
-
-**Expected output format:** a list of dicts (`list[dict]`) with `content`, `start_line`, `end_line`, and `metadata` containing `header_path` and `strategy`.
-
-### 2) Hierarchy + leaf + significant parents via chunk_hierarchical
-
-**Why this matters:** get a navigable tree for section-aware search and a flat list for indexing.
-
-```python
-from chunkana import MarkdownChunker, ChunkConfig
-
-chunker = MarkdownChunker(ChunkConfig(validate_invariants=True))
-result = chunker.chunk_hierarchical(text)
-
-root = result.get_chunk(result.root_id)
-children = result.get_children(result.root_id)
-flat_chunks = result.get_flat_chunks()  # leaf + significant parent chunks
-```
-
-**Expected output format:** a `HierarchicalChunkingResult` with tree navigation plus a list of `Chunk` from `get_flat_chunks()`.
-
-### 3) Stream large Markdown files
-
-**Why this matters:** process multi-megabyte docs without loading everything in memory.
+**Why this matters:** stream multi-megabyte files without loading the whole document into RAM.
 
 ```python
 from chunkana import MarkdownChunker
@@ -237,62 +203,76 @@ for chunk in chunker.chunk_file_streaming("docs/handbook.md"):
     print(chunk.metadata["chunk_index"], chunk.size)
 ```
 
-**Expected output format:** a generator of `Chunk` objects yielded in order, each with `metadata["chunk_index"]`.
+**Memory note:** the streaming API yields chunks incrementally, so peak memory stays close to chunk size instead of document size.
 
-### 4) Code-context binding + adaptive chunk sizing
+### 2) Hierarchical mode + choosing flat vs all chunks
 
-**Why this matters:** keep explanations adjacent to code while adapting chunk sizes to mixed content.
+**Why this matters:** use `flat_chunks` for indexing, but keep `all_chunks` for tree navigation and summaries.
 
 ```python
-from chunkana import chunk_markdown, ChunkerConfig
-from chunkana.adaptive_sizing import AdaptiveSizeConfig
+from chunkana import MarkdownChunker, ChunkConfig
 
-config = ChunkerConfig(
-    enable_code_context_binding=True,
-    use_adaptive_sizing=True,
-    adaptive_config=AdaptiveSizeConfig(
-        base_size=1500,
-        code_weight=0.4,
-        min_size=500,
-        max_size=8000,
-    ),
-)
+chunker = MarkdownChunker(ChunkConfig(validate_invariants=True))
+result = chunker.chunk_hierarchical(text)
 
-chunks = chunk_markdown(text, config)
+all_chunks = result.chunks  # all nodes (root + parents + leaves)
+flat_chunks = result.get_flat_chunks()  # leaves + significant parents
 ```
 
-**Expected output format:** a list of `Chunk` where code blocks stay bound to nearby context and `chunk.size` varies with content.
+**Tip:** prefer `flat_chunks` for retrieval, and keep `all_chunks` for navigation (`get_children`, `get_parent`).
 
-### 5) Tables + LaTeX preserved as atomic blocks
+### 3) Tables + LaTeX grouping
 
-**Why this matters:** avoid splitting tables/formulas and group related tables into a single chunk.
+**Why this matters:** group related tables and keep formulas intact for better retrieval context.
 
 ```python
-from chunkana import chunk_markdown, ChunkerConfig
+from chunkana import chunk_markdown, ChunkConfig
 
-config = ChunkerConfig(
-    preserve_latex_blocks=True,
+config = ChunkConfig(
     group_related_tables=True,
+    preserve_latex_blocks=True,
 )
 
 chunks = chunk_markdown(text, config)
 ```
 
-**Expected output format:** a list of `Chunk` where tables and LaTeX blocks remain intact, with related tables grouped.
+**Expected output format:** tables are grouped and LaTeX blocks stay atomic within each `Chunk`.
 
-### 6) Dify-compatible output with render_dify_style
+### 4) Custom render/export with metadata enrichment (JSON)
 
-**Why this matters:** plug into Dify ingestion without changing your output schema.
+**Why this matters:** enrich chunks before exporting to a vector store or search index.
 
 ```python
 from chunkana import chunk_markdown
-from chunkana.renderers import render_dify_style
+from chunkana.renderers import render_json
 
 chunks = chunk_markdown(text)
-output = render_dify_style(chunks)
+payload = render_json(chunks)
+
+for item in payload:
+    item["metadata"]["source"] = "docs/handbook.md"
+    item["metadata"]["ingested_at"] = "2024-06-01"
 ```
 
-**Expected output format:** a list of strings with `<metadata>...</metadata>` blocks prepended to each chunk.
+**Expected output format:** a list of dicts you can serialize directly (e.g., `json.dumps(payload)`).
+
+### 5) RAG preset with tuned chunk size + overlap
+
+**Why this matters:** balance recall and token budget for retrieval.
+
+```python
+from chunkana import chunk_markdown, ChunkConfig
+
+rag_config = ChunkConfig(
+    max_chunk_size=2000,
+    min_chunk_size=400,
+    overlap_size=150,
+)
+
+chunks = chunk_markdown(text, rag_config)
+```
+
+**Sizing guide:** set `max_chunk_size` near your target context window slice, and `overlap_size` just large enough to keep cross-boundary context (typically 5–10% of `max_chunk_size`).
 
 ## Configuration
 
