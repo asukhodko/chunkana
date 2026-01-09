@@ -34,8 +34,11 @@ Traditional splitters break Markdown structure and cause semantic drift. Chunkan
 
 ## Next steps
 
+- [Documentation Index](index.md)
 - [Quick Start](quickstart.md)
 - [Configuration](config.md)
 - [Strategies](strategies.md)
 - [Renderers](renderers.md)
 - [Integrations](integrations/dify.md)
+- [Metadata reference](metadata.md)
+- [Errors & troubleshooting](errors.md)
