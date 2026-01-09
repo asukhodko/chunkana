@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 
-from chunkana import chunk_markdown, ChunkConfig
+from chunkana import ChunkConfig, chunk_markdown
 
 # Проблемный документ из теста
-doc = '''# Section 1
+doc = """# Section 1
 
 1. aaaaaaaaaaaaaaaaaaaa
 2. aaaaaaaaaaaaaaaaaaaa
@@ -31,7 +31,7 @@ doc = '''# Section 1
 
 1. aaaaaaaaaaaaaaaaaaaa
 2. aaaaaaaaaaaaaaaaaaaa
-3. aaaaaaaaaaaaaaaaaaaa'''
+3. aaaaaaaaaaaaaaaaaaaa"""
 
 config = ChunkConfig(max_chunk_size=400, overlap_size=50)
 chunks = chunk_markdown(doc, config)
@@ -55,16 +55,16 @@ for header_path, group in split_groups.items():
     if len(group) > 1:
         total_content_size = sum(len(c.content) for c in group)
         original_size = group[0].metadata.get("original_section_size", 0)
-        
+
         print(f"\nHeader path: {header_path}")
         print(f"Group size: {len(group)} chunks")
         print(f"Total content size: {total_content_size}")
         print(f"Original size: {original_size}")
-        
+
         if original_size > 0:
             ratio = total_content_size / original_size
             print(f"Ratio: {ratio:.4f}")
-            
+
             # Показать содержимое чанков
             for i, chunk in enumerate(group):
                 print(f"\nChunk {i} (split_index={chunk.metadata.get('split_index')}):")

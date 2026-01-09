@@ -267,4 +267,6 @@ class TestSplitChunkProperties:
                 # but not excessively larger. Allow small variations due to content normalization.
                 if original_size > 0:
                     ratio = total_content_size / original_size
-                    assert 0.95 <= ratio <= 3.0, f"Split chunks size ratio unreasonable: {ratio:.2f}"
+                    assert 0.95 <= ratio <= 3.0, (
+                        f"Split chunks size ratio unreasonable: {ratio:.2f}"
+                    )

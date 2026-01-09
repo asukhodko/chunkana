@@ -5,7 +5,6 @@ Task 13.3: Tests for JSON format, inline metadata format.
 Validates: Requirements 6.1-6.3
 """
 
-import json
 
 import pytest
 
