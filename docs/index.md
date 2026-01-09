@@ -1,34 +1,51 @@
-# Documentation Index
+# Chunkana Documentation
 
-Use this page as the main entry point to the Chunkana docs. Each link includes a quick summary so you can jump to the right guide fast.
+Welcome to Chunkana - a semantic Markdown chunker for RAG and LLM pipelines. This documentation will help you get started and make the most of Chunkana's features.
 
-## Getting started
+## Getting Started
 
-- [Overview](overview.md) — what Chunkana is and the problems it solves.
-- [Quick Start](quickstart.md) — minimal examples to chunk Markdown quickly.
-- [Configuration](config.md) — all core config options and defaults.
+Start here if you're new to Chunkana:
 
-## Concepts & behavior
+- **[Quick Start](quickstart.md)** - Get chunking in under 5 minutes
+- **[Overview](overview.md)** - What Chunkana is and why you need it
+- **[Examples](examples.md)** - Practical examples for common use cases
+- **[FAQ](faq.md)** - Frequently asked questions and answers
 
-- [Strategies](strategies.md) — how automatic strategy selection works and how to override it.
-- [Renderers](renderers.md) — output formats (JSON, Dify-style metadata blocks, inline metadata).
-- [Metadata reference](metadata.md) — `Chunk` fields and the meaning of key metadata properties.
+## Core Concepts
 
-## Debugging & errors
+Understand how Chunkana works:
 
-- [Debug mode](debug_mode.md) — metadata differences between standard vs hierarchical chunking.
-- [Errors & troubleshooting](errors.md) — common exception types and how to resolve them.
+- **[Configuration](config.md)** - Essential configuration options
+- **[Strategies](strategies.md)** - How automatic strategy selection works
+- **[Metadata Reference](metadata.md)** - Understanding chunk metadata
+- **[Renderers](renderers.md)** - Output formats and customization
 
 ## Integrations
 
-- [Dify](integrations/dify.md) — renderer parity with Dify ingestion.
-- [n8n](integrations/n8n.md) — automation-friendly pipeline setup.
-- [Windmill](integrations/windmill.md) — batch workflows for document processing.
+Connect Chunkana to your workflow:
 
-## Migration
+- **[Dify](integrations/dify.md)** - Direct Dify workflow integration
+- **[n8n](integrations/n8n.md)** - Automation pipeline setup
+- **[Windmill](integrations/windmill.md)** - Batch processing workflows
 
-- [Parity matrix](migration/parity_matrix.md) — mapping to dify-markdown-chunker behavior.
+## Troubleshooting
 
-## Internal/roadmap
+When things don't work as expected:
 
-- [Documentation TODOs](TODO_DOCUMENTATION.md) — backlog of future documentation items.
+- **[Debug Mode](debug_mode.md)** - Understanding chunking behavior
+- **[Errors & Troubleshooting](errors.md)** - Common issues and solutions
+
+## Advanced Topics
+
+For power users and contributors:
+
+- **[Performance Guide](performance.md)** - Optimization and benchmarking
+- **[API Reference](api/)** - Complete API documentation
+- **[Migration Guide](migration/)** - Migrating from other chunkers
+- **[Testing](testing/)** - Testing strategies and tools
+
+## Need Help?
+
+- **GitHub Issues**: [Report bugs or request features](https://github.com/asukhodko/chunkana/issues)
+- **Discussions**: [Ask questions and share ideas](https://github.com/asukhodko/chunkana/discussions)
+- **Contributing**: See [CONTRIBUTING.md](../CONTRIBUTING.md) for development setup
