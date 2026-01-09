@@ -89,7 +89,7 @@ Chunkana is a high-precision Markdown chunking library for RAG pipelines, search
 
 - **Semantic guarantees**: never splits atomic structures (headers, lists, code fences, tables, LaTeX blocks) so each chunk stays valid and retrievable.
 - **RAG metadata first**: every chunk carries header paths, line ranges, content type, overlap context, and strategy hints for filtering and ranking.
-- **dify-markdown-chunker compatibility**: renderers emit Dify-style payloads without rewriting your ingestion pipeline.
+- **Plugin compatibility**: renderers emit structured payloads compatible with various downstream systems.
 - **Adaptive strategies**: auto-selects structure-, list-, or code-aware strategies to keep mixed documents coherent.
 
 ### Problem → Solution

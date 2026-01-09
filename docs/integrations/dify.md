@@ -2,13 +2,10 @@
 
 Using Chunkana with Dify workflows.
 
-## Quick migration
+## Quick Start
 
 ```python
-# Before (dify-markdown-chunker plugin)
-result = chunker.chunk(text, include_metadata=True)
-
-# After (Chunkana)
+# Using Chunkana with Dify
 from chunkana import chunk_markdown
 from chunkana.renderers import render_dify_style
 
@@ -32,7 +29,7 @@ result = render_dify_style(chunks)
 
 ### Config fields
 
-All 17 plugin config fields are supported. See [Parity Matrix](../migration/parity_matrix.md).
+All configuration fields are supported. See [Parameter Mapping](../api/parameter-mapping.md) for complete details.
 
 ## Basic usage
 
@@ -106,19 +103,21 @@ def main(text: str, debug: bool = False) -> dict:
 
 ## Common pitfalls
 
-1. **Return type changed**: The plugin could return `List[str]` or `List[Chunk]`. Chunkana always returns `List[Chunk]` — use renderers for strings.
+1. **Return type changed**: Chunkana always returns `List[Chunk]` — use renderers for strings.
 2. **include_metadata is not a parameter**: Use renderer selection instead.
 3. **strategy="auto"**: In Chunkana, use `strategy_override=None` (default).
-4. **chunk_overlap vs overlap_size**: Plugin tool uses `chunk_overlap`, config uses `overlap_size`.
+4. **chunk_overlap vs overlap_size**: Tool uses `chunk_overlap`, config uses `overlap_size`.
 
-## Migration verification
+## Compatibility verification
 
 ```bash
-# Run baseline tests to verify parity
+# Run baseline tests to verify compatibility
 pytest tests/baseline/test_canonical.py -v
 pytest tests/baseline/test_view_level.py -v
 ```
 
-## Full migration guide
+## See Also
 
-See [MIGRATION_GUIDE.md](../../MIGRATION_GUIDE.md) for detailed migration instructions.
+- [Parameter Mapping](../api/parameter-mapping.md) - Complete parameter reference
+- [Compatibility](../api/compatibility.md) - Compatibility guarantees and differences
+- [Advanced Usage](../examples/advanced-usage.md) - Advanced features and examples

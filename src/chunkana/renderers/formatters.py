@@ -92,7 +92,7 @@ def render_with_embedded_overlap(chunks: list["Chunk"]) -> list[str]:
     Produces: previous_content + "\\n" + content + "\\n" + next_content
 
     Use case: "rich context" mode. Whether this matches v2 include_metadata=False
-    is determined by BASELINE.md and renderer golden outputs.
+    is determined by baseline test fixtures and renderer golden outputs.
 
     Does not modify chunks.
 
@@ -124,7 +124,7 @@ def render_with_prev_overlap(chunks: list["Chunk"]) -> list[str]:
     Produces: previous_content + "\\n" + content
 
     Use case: "sliding window" mode. Whether this matches v2 include_metadata=False
-    is determined by BASELINE.md and renderer golden outputs.
+    is determined by baseline test fixtures and renderer golden outputs.
 
     Does not modify chunks.
 

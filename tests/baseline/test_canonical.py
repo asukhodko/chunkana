@@ -5,7 +5,7 @@ These tests ensure Chunkana canonical output (list[Chunk]) matches
 plugin golden outputs byte-for-byte.
 
 Source of truth: tests/baseline/golden_canonical/*.jsonl
-Generated from plugin at commit specified in BASELINE.md
+Generated from plugin at commit specified in docs/testing/fixtures.md
 """
 
 import json

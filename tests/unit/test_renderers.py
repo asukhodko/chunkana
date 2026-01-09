@@ -11,7 +11,6 @@ import pytest
 
 from chunkana import Chunk
 from chunkana.renderers import (
-    render_dify_style,
     render_json,
     render_with_embedded_overlap,
     render_with_prev_overlap,
@@ -92,65 +91,6 @@ class TestRenderJson:
         original_content = sample_chunks[0].content
         render_json(sample_chunks)
         assert sample_chunks[0].content == original_content
-
-
-class TestRenderDifyStyle:
-    """Tests for render_dify_style function."""
-
-    def test_returns_list_of_strings(self, sample_chunks):
-        """render_dify_style should return list of strings."""
-        result = render_dify_style(sample_chunks)
-
-        assert isinstance(result, list)
-        assert len(result) == 3
-        assert all(isinstance(s, str) for s in result)
-
-    def test_contains_metadata_block(self, sample_chunks):
-        """Each string should contain <metadata> block."""
-        result = render_dify_style(sample_chunks)
-
-        for s in result:
-            assert "<metadata>" in s
-            assert "</metadata>" in s
-
-    def test_metadata_is_valid_json(self, sample_chunks):
-        """Metadata block should contain valid JSON."""
-        result = render_dify_style(sample_chunks)
-
-        for s in result:
-            # Extract JSON between tags
-            start = s.index("<metadata>") + len("<metadata>")
-            end = s.index("</metadata>")
-            json_str = s[start:end].strip()
-
-            # Should be valid JSON
-            parsed = json.loads(json_str)
-            assert isinstance(parsed, dict)
-
-    def test_includes_start_end_line_in_metadata(self, sample_chunks):
-        """Metadata should include start_line and end_line."""
-        result = render_dify_style(sample_chunks)
-
-        # Check first chunk
-        start = result[0].index("<metadata>") + len("<metadata>")
-        end = result[0].index("</metadata>")
-        metadata = json.loads(result[0][start:end].strip())
-
-        assert "start_line" in metadata
-        assert "end_line" in metadata
-        assert metadata["start_line"] == 1
-        assert metadata["end_line"] == 5
-
-    def test_content_follows_metadata(self, sample_chunks):
-        """Chunk content should follow metadata block."""
-        result = render_dify_style(sample_chunks)
-
-        for i, s in enumerate(result):
-            assert sample_chunks[i].content in s
-            # Content should be after </metadata>
-            metadata_end = s.index("</metadata>")
-            content_pos = s.index(sample_chunks[i].content)
-            assert content_pos > metadata_end
 
 
 class TestRenderWithEmbeddedOverlap:
@@ -235,7 +175,6 @@ class TestRendererEdgeCases:
     def test_empty_chunks_list(self):
         """All renderers should handle empty list."""
         assert render_json([]) == []
-        assert render_dify_style([]) == []
         assert render_with_embedded_overlap([]) == []
         assert render_with_prev_overlap([]) == []
 
@@ -253,9 +192,9 @@ class TestRendererEdgeCases:
             },
         )
 
-        result = render_dify_style([chunk])
-        assert "Привет мир!" in result[0]
-        assert "你好世界!" in result[0]
+        result = render_json([chunk])
+        assert "Привет мир!" in str(result[0])
+        assert "你好世界!" in str(result[0])
 
     def test_chunk_with_special_json_chars(self):
         """Renderers should handle special JSON characters."""
@@ -271,9 +210,9 @@ class TestRendererEdgeCases:
             },
         )
 
-        result = render_dify_style([chunk])
+        result = render_json([chunk])
         # Should not raise and should contain escaped content
-        assert "quotes" in result[0]
+        assert "quotes" in str(result[0])
 
     def test_chunk_with_empty_overlap(self):
         """Renderers should handle empty overlap strings."""

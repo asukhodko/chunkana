@@ -12,7 +12,7 @@ Usage:
     python scripts/generate_baseline.py --plugin-path /path/to/dify-markdown-chunker
 
 Requirements:
-    - Plugin must be at pinned commit (see BASELINE.md)
+    - Plugin must be at pinned commit (see docs/testing/fixtures.md)
     - Plugin dependencies must be installed
 """
 
@@ -268,7 +268,7 @@ def main():
         ChunkConfig,
     )
 
-    print("\nDone! Don't forget to update BASELINE.md with commit SHA.")
+    print("\nDone! Don't forget to update docs/testing/fixtures.md with commit SHA.")
 
 
 if __name__ == "__main__":

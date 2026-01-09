@@ -19,7 +19,7 @@ Advanced usage:
     chunks = chunker.chunk(text)
 """
 
-__version__ = "0.1.2"
+__version__ = "0.1.5"
 
 # Core API
 from .api import (

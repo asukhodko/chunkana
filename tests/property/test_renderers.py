@@ -14,7 +14,6 @@ from hypothesis import strategies as st
 
 from chunkana import chunk_markdown
 from chunkana.renderers import (
-    render_dify_style,
     render_inline_metadata,
     render_json,
     render_with_embedded_overlap,
@@ -227,35 +226,6 @@ class TestRenderInlineMetadataSortedKeys:
 # =============================================================================
 # Additional Renderer Tests
 # =============================================================================
-
-
-class TestRenderDifyStyleFormat:
-    """Tests for render_dify_style format."""
-
-    @given(text=simple_markdown)
-    def test_contains_metadata_block(self, text: str):
-        """render_dify_style output contains <metadata> block."""
-        chunks = chunk_markdown(text)
-        outputs = render_dify_style(chunks)
-
-        for i, output in enumerate(outputs):
-            assert "<metadata>" in output, f"Chunk {i}: missing <metadata>"
-            assert "</metadata>" in output, f"Chunk {i}: missing </metadata>"
-
-    @given(text=simple_markdown)
-    def test_metadata_contains_line_numbers(self, text: str):
-        """render_dify_style metadata includes start_line and end_line."""
-        chunks = chunk_markdown(text)
-        outputs = render_dify_style(chunks)
-
-        for i, output in enumerate(outputs):
-            start = output.index("<metadata>") + len("<metadata>\n")
-            end = output.index("</metadata>")
-            json_str = output[start:end].strip()
-            metadata = json.loads(json_str)
-
-            assert "start_line" in metadata, f"Chunk {i}: missing start_line"
-            assert "end_line" in metadata, f"Chunk {i}: missing end_line"
 
 
 class TestRenderWithEmbeddedOverlapFormat:

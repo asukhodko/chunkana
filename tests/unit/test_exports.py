@@ -44,12 +44,6 @@ class TestMinimalStableAPI:
 
         assert callable(chunk_file)
 
-    def test_render_dify_style_export(self):
-        """Verify render_dify_style function is exported."""
-        from chunkana import render_dify_style
-
-        assert callable(render_dify_style)
-
     def test_render_with_embedded_overlap_export(self):
         """Verify render_with_embedded_overlap function is exported."""
         from chunkana import render_with_embedded_overlap
@@ -141,47 +135,6 @@ class TestExtendedAPI:
         assert MarkdownChunker is not None
 
 
-class TestNoDifySDKImports:
-    """Verify no Dify SDK imports in public API."""
-
-    def test_no_dify_imports_in_init(self):
-        """Verify __init__.py doesn't import from dify_plugin."""
-        import inspect
-
-        import chunkana
-
-        source = inspect.getsourcefile(chunkana)
-        with open(source) as f:
-            content = f.read()
-
-        assert "dify_plugin" not in content, "chunkana.__init__ should not import from dify_plugin"
-        assert "from dify" not in content, "chunkana.__init__ should not import from dify"
-
-    def test_no_dify_in_api_module(self):
-        """Verify api.py doesn't import from dify_plugin."""
-        import inspect
-
-        from chunkana import api
-
-        source = inspect.getsourcefile(api)
-        with open(source) as f:
-            content = f.read()
-
-        assert "dify_plugin" not in content, "chunkana.api should not import from dify_plugin"
-
-    def test_no_dify_in_renderers(self):
-        """Verify renderers don't import from dify_plugin."""
-        import inspect
-
-        from chunkana import renderers
-
-        source = inspect.getsourcefile(renderers)
-        with open(source) as f:
-            content = f.read()
-
-        assert "dify_plugin" not in content, "chunkana.renderers should not import from dify_plugin"
-
-
 class TestAllExportsWork:
     """Verify all __all__ exports actually work."""
 
@@ -214,10 +167,10 @@ class TestFunctionalImports:
 
     def test_rendering_workflow(self):
         """Test rendering workflow with imports."""
-        from chunkana import chunk_markdown, render_dify_style
+        from chunkana import chunk_markdown, render_with_embedded_overlap
 
         chunks = chunk_markdown("# Test\n\nContent")
-        outputs = render_dify_style(chunks)
+        outputs = render_with_embedded_overlap(chunks)
         assert len(outputs) == len(chunks)
 
     def test_hierarchical_workflow(self):

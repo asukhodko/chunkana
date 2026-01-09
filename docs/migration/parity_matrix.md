@@ -93,7 +93,7 @@ Fields available only in Chunkana (not in plugin):
 | Impact | More chunks | Fewer, larger chunks |
 | RAG quality | May retrieve incomplete context | Better context preservation |
 
-See [MIGRATION_GUIDE.md](../../MIGRATION_GUIDE.md#behavioral-differences) for details.
+See [API Compatibility Guide](../api/compatibility.md) for details.
 
 ## Verification
 

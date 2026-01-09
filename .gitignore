@@ -25,6 +25,7 @@ dist/
 htmlcov/
 .tox/
 .nox/
+.backup/
 
 # Type checking
 .mypy_cache/
@@ -38,6 +39,7 @@ htmlcov/
 *.swp
 *.swo
 *~
+.kiro/specs/
 
 # OS
 .DS_Store
