@@ -191,7 +191,26 @@ Core fields follow this shape:
 Use these patterns to scale from simple chunking to rich retrieval pipelines.
 Each example shows a focused capability you can drop into production quickly.
 
-### 1) Build a hierarchical chunk tree
+### 1) RAG pipeline with JSON rendering + metadata
+
+**Why this matters:** keep `header_path` and `strategy` for filtering/ranking in RAG indexes.
+
+```python
+from chunkana import chunk_markdown
+from chunkana.renderers import render_json
+
+chunks = chunk_markdown(text)
+payload = render_json(chunks)
+
+for item in payload:
+    print(item["metadata"]["header_path"], item["metadata"]["strategy"])
+```
+
+**Expected output format:** a list of dicts (`list[dict]`) with `content`, `start_line`, `end_line`, and `metadata` containing `header_path` and `strategy`.
+
+### 2) Hierarchy + leaf + significant parents via chunk_hierarchical
+
+**Why this matters:** get a navigable tree for section-aware search and a flat list for indexing.
 
 ```python
 from chunkana import MarkdownChunker, ChunkConfig
@@ -204,7 +223,11 @@ children = result.get_children(result.root_id)
 flat_chunks = result.get_flat_chunks()  # leaf + significant parent chunks
 ```
 
-### 2) Stream large Markdown files
+**Expected output format:** a `HierarchicalChunkingResult` with tree navigation plus a list of `Chunk` from `get_flat_chunks()`.
+
+### 3) Stream large Markdown files
+
+**Why this matters:** process multi-megabyte docs without loading everything in memory.
 
 ```python
 from chunkana import MarkdownChunker
@@ -214,23 +237,18 @@ for chunk in chunker.chunk_file_streaming("docs/handbook.md"):
     print(chunk.metadata["chunk_index"], chunk.size)
 ```
 
-### 3) Emit Dify-compatible output
+**Expected output format:** a generator of `Chunk` objects yielded in order, each with `metadata["chunk_index"]`.
 
-```python
-from chunkana import chunk_markdown
-from chunkana.renderers import render_dify_style
+### 4) Code-context binding + adaptive chunk sizing
 
-chunks = chunk_markdown(text)
-output = render_dify_style(chunks)
-```
-
-### 4) Adaptive chunk sizing for mixed documents
+**Why this matters:** keep explanations adjacent to code while adapting chunk sizes to mixed content.
 
 ```python
 from chunkana import chunk_markdown, ChunkerConfig
 from chunkana.adaptive_sizing import AdaptiveSizeConfig
 
 config = ChunkerConfig(
+    enable_code_context_binding=True,
     use_adaptive_sizing=True,
     adaptive_config=AdaptiveSizeConfig(
         base_size=1500,
@@ -242,6 +260,39 @@ config = ChunkerConfig(
 
 chunks = chunk_markdown(text, config)
 ```
+
+**Expected output format:** a list of `Chunk` where code blocks stay bound to nearby context and `chunk.size` varies with content.
+
+### 5) Tables + LaTeX preserved as atomic blocks
+
+**Why this matters:** avoid splitting tables/formulas and group related tables into a single chunk.
+
+```python
+from chunkana import chunk_markdown, ChunkerConfig
+
+config = ChunkerConfig(
+    preserve_latex_blocks=True,
+    group_related_tables=True,
+)
+
+chunks = chunk_markdown(text, config)
+```
+
+**Expected output format:** a list of `Chunk` where tables and LaTeX blocks remain intact, with related tables grouped.
+
+### 6) Dify-compatible output with render_dify_style
+
+**Why this matters:** plug into Dify ingestion without changing your output schema.
+
+```python
+from chunkana import chunk_markdown
+from chunkana.renderers import render_dify_style
+
+chunks = chunk_markdown(text)
+output = render_dify_style(chunks)
+```
+
+**Expected output format:** a list of strings with `<metadata>...</metadata>` blocks prepended to each chunk.
 
 ## Configuration
 
