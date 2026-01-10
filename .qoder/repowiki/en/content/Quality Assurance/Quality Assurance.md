@@ -4,24 +4,34 @@
 **Referenced Files in This Document**   
 - [header_processor.py](file://src/chunkana/header_processor.py)
 - [validator.py](file://src/chunkana/validator.py)
+- [invariant_validator.py](file://src/chunkana/invariant_validator.py)
 - [exceptions.py](file://src/chunkana/exceptions.py)
 - [types.py](file://src/chunkana/types.py)
 - [config.py](file://src/chunkana/config.py)
 - [chunker.py](file://src/chunkana/chunker.py)
 - [test_dangling_headers.py](file://test_dangling_headers.py)
 - [test_micro_chunks.py](file://test_micro_chunks.py)
+- [test_invariant_validation.py](file://tests/unit/test_invariant_validation.py)
 </cite>
+
+## Update Summary
+**Changes Made**   
+- Added new section on InvariantValidator component and expanded validation invariants
+- Updated Validation and Integrity Checking section to reflect new validation capabilities
+- Updated diagram sources to include invariant_validator.py
+- Added test_invariant_validation.py to referenced files
 
 ## Table of Contents
 1. [Introduction](#introduction)
 2. [Dangling Header Prevention](#dangling-header-prevention)
 3. [Micro-Chunk Minimization](#micro-chunk-minimization)
 4. [Validation and Integrity Checking](#validation-and-integrity-checking)
-5. [Exception Hierarchy and Error Handling](#exception-hierarchy-and-error-handling)
-6. [Configuration Options](#configuration-options)
-7. [Debugging and Testing Tools](#debugging-and-testing-tools)
-8. [Examples of Problematic Inputs](#examples-of-problematic-inputs)
-9. [Conclusion](#conclusion)
+5. [Invariant Validation](#invariant-validation)
+6. [Exception Hierarchy and Error Handling](#exception-hierarchy-and-error-handling)
+7. [Configuration Options](#configuration-options)
+8. [Debugging and Testing Tools](#debugging-and-testing-tools)
+9. [Examples of Problematic Inputs](#examples-of-problematic-inputs)
+10. [Conclusion](#conclusion)
 
 ## Introduction
 Chunkana provides robust quality assurance features to ensure high-quality document chunking. The system focuses on two primary mechanisms: dangling header prevention and micro-chunk minimization. These features work together with comprehensive validation, a structured exception hierarchy, and configurable behavior to produce reliable, semantically coherent chunks. This documentation details how these quality assurance mechanisms operate, their implementation, and how to configure and debug them effectively.
@@ -30,7 +40,7 @@ Chunkana provides robust quality assurance features to ensure high-quality docum
 
 Chunkana's dangling header prevention system ensures that headers remain properly connected to their content, preventing situations where a header is separated from its associated text across chunk boundaries. The system uses a multi-step approach involving detection, analysis, and remediation.
 
-The header processor detects dangling headers by analyzing chunk sequences and identifying headers at the end of chunks that should be connected to content in subsequent chunks. Specifically, it looks for headers of levels 3-6 (### and deeper) that appear at the end of a chunk while their content resides in the next chunk. The detection algorithm examines the last non-empty line of a chunk to determine if it's a header, checks if there's minimal content after the header in the current chunk, and verifies that the next chunk contains content that belongs to this header rather than starting with a header of the same or higher level.
+The header processor detects dangling headers by analyzing chunk sequences and identifying headers at the end of chunks that should be connected to content in subsequent chunks. Specifically, it looks for headers of levels 2-6 (## and deeper) that appear at the end of a chunk while their content resides in the next chunk. The detection algorithm examines the last non-empty line of a chunk to determine if it's a header, checks if there's minimal content after the header in the current chunk (less than 30 characters), and verifies that the next chunk contains content that belongs to this header rather than starting with a header of the same or higher level.
 
 When a dangling header is detected, Chunkana attempts to fix it through one of three strategies: moving the header to the beginning of the next chunk, merging the chunks if moving would exceed size limits, or leaving the chunks unchanged with a warning if merging would also exceed limits. This ensures that headers and their content remain together while respecting the configured size constraints.
 
@@ -139,6 +149,46 @@ Validator --> ValidationResult : returns
 **Section sources**
 - [validator.py](file://src/chunkana/validator.py#L1-L221)
 
+## Invariant Validation
+
+Chunkana introduces a new InvariantValidator component that expands the validation capabilities beyond the basic domain properties. The InvariantValidator enforces quality invariants that ensure high-quality chunking results through three key checks: no dangling headers, no invalid oversize chunks, and sufficient content coverage.
+
+The InvariantValidator performs the following checks:
+- **No Dangling Headers** - Checks for headers at the end of chunks that should be connected to content in subsequent chunks. Unlike the header processor which fixes levels 2-6, the invariant check covers ALL levels 1-6 to ensure comprehensive validation.
+- **No Invalid Oversize** - Verifies that oversize chunks have valid reasons for exceeding size limits. Valid reasons include "code_block_integrity", "table_integrity", and "list_item_integrity". The "section_integrity" reason has been removed to prevent text/list oversize.
+- **Content Coverage** - Calculates recall of original lines (≥95% threshold) using a fair metric that is not inflated by header repetition, overlap, or content duplication. Only lines ≥20 characters are considered significant.
+
+The InvariantValidator returns a ValidationResult with detailed information including coverage metrics and indices of problematic chunks. It can operate in strict mode where violations are treated as errors rather than warnings.
+
+```mermaid
+classDiagram
+class InvariantValidator {
++validate(chunks, original_text) ValidationResult
++_check_no_dangling_headers(chunks) list[int]
++_check_no_invalid_oversize(chunks) list[int]
++_calculate_line_recall(chunks, original_text) float
++validate_no_dangling(chunks) bool
++validate_size_bounds(chunks) bool
+}
+class ValidationResult {
++valid : bool
++errors : list[str]
++warnings : list[str]
++coverage : float
++dangling_header_indices : list[int]
++invalid_oversize_indices : list[int]
+}
+InvariantValidator --> ValidationResult : returns
+```
+
+**Diagram sources**
+- [invariant_validator.py](file://src/chunkana/invariant_validator.py#L36-L234)
+- [test_invariant_validation.py](file://tests/unit/test_invariant_validation.py#L1-L321)
+
+**Section sources**
+- [invariant_validator.py](file://src/chunkana/invariant_validator.py#L1-L234)
+- [test_invariant_validation.py](file://tests/unit/test_invariant_validation.py#L1-L321)
+
 ## Exception Hierarchy and Error Handling
 
 Chunkana implements a comprehensive exception hierarchy designed to provide actionable error messages and debugging context. All exceptions inherit from the base ChunkanaError class, which includes debugging context and common error reporting functionality.
@@ -216,12 +266,12 @@ The configuration system also includes convenience methods for common use cases,
 
 Chunkana includes comprehensive debugging and testing tools to help developers understand and verify the quality assurance features. These tools include dedicated test scripts, configuration options for debugging, and metadata tracking.
 
-The system provides two primary test scripts: `test_dangling_headers.py` for verifying the dangling header prevention system and `test_micro_chunks.py` for testing the micro-chunk minimization algorithm. These tests validate that headers remain connected to their content and that small chunks are properly handled according to the defined rules.
+The system provides several test scripts: `test_dangling_headers.py` for verifying the dangling header prevention system, `test_micro_chunks.py` for testing the micro-chunk minimization algorithm, and `test_invariant_validation.py` for validating the new invariant validation capabilities. These tests ensure that headers remain connected to their content, small chunks are properly handled, and quality invariants are maintained.
 
 For debugging, Chunkana includes several metadata fields that track the processing history:
 - **dangling_header_fixed**: Indicates when a dangling header has been fixed
 - **merge_reason**: Specifies why chunks were merged
-- **header_moved_from**: Tracks the source chunk index when a header is moved
+- **header_moved_from_id**: Tracks the source chunk ID when a header is moved (stable tracking)
 - **small_chunk** and **small_chunk_reason**: Flag chunks that are considered insignificant small chunks
 
 The configuration system also supports a debug mode through the `strict_mode` parameter, which treats validation warnings as errors, helping to identify potential issues during development.
@@ -229,6 +279,7 @@ The configuration system also supports a debug mode through the `strict_mode` pa
 **Section sources**
 - [test_dangling_headers.py](file://test_dangling_headers.py#L1-L271)
 - [test_micro_chunks.py](file://test_micro_chunks.py#L1-L329)
+- [test_invariant_validation.py](file://tests/unit/test_invariant_validation.py#L1-L321)
 - [config.py](file://src/chunkana/config.py#L109-L110)
 
 ## Examples of Problematic Inputs
@@ -286,5 +337,7 @@ Chunkana preserves the preamble as a separate chunk while ensuring it doesn't ge
 Chunkana's quality assurance system provides a comprehensive approach to ensuring high-quality document chunking through its two primary mechanisms: dangling header prevention and micro-chunk minimization. These features work in concert with a robust validation system, structured exception hierarchy, and flexible configuration options to produce reliable, semantically coherent chunks.
 
 The dangling header prevention system ensures that headers remain properly connected to their content by detecting and fixing separation issues through header movement or chunk merging. The micro-chunk minimization algorithm identifies and handles insignificant small chunks while preserving important atomic blocks with structural significance.
+
+The new InvariantValidator component expands the validation capabilities by enforcing quality invariants across three dimensions: preventing dangling headers at all levels (1-6), ensuring valid reasons for oversize chunks, and maintaining high content coverage through a recall-based metric. This comprehensive validation approach ensures that chunking results meet high-quality standards.
 
 Together with comprehensive validation, detailed error handling, and extensive configuration options, these quality assurance features make Chunkana a reliable solution for document chunking. The system's design prioritizes content integrity, structural coherence, and developer usability, providing both automated quality improvements and transparent debugging information when issues arise.

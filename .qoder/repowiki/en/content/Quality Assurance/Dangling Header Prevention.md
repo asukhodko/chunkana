@@ -3,11 +3,16 @@
 <cite>
 **Referenced Files in This Document**
 - [header_processor.py](file://src/chunkana/header_processor.py)
-- [chunker.py](file://src/chunkana/chunker.py)
-- [types.py](file://src/chunkana/types.py)
-- [config.py](file://src/chunkana/config.py)
 - [test_dangling_headers.py](file://test_dangling_headers.py)
 </cite>
+
+## Update Summary
+**Changes Made**
+- Updated documentation to reflect expanded header level detection from 3-6 to 2-6
+- Updated content threshold from 50 to 30 characters
+- Added details about chunk_id tracking for provenance
+- Updated iteration limit from 10 to 20 in the processing loop
+- Updated all relevant diagrams to reflect the changes in detection logic
 
 ## Table of Contents
 1. [Introduction](#introduction)
@@ -22,7 +27,7 @@
 10. [Appendices](#appendices)
 
 ## Introduction
-This document explains the dangling header prevention feature in Chunkana. It focuses on how the system detects headers that appear at the end of a chunk but whose content resides in the next chunk, and how it fixes them using a three-tiered strategy: moving headers to the next chunk, merging chunks, or logging warnings when size limits would be exceeded. It also details the provenance tracking mechanism that records the source chunk indices in metadata and describes the iterative processing approach used to handle cascading changes.
+This document explains the dangling header prevention feature in Chunkana. It focuses on how the system detects headers that appear at the end of a chunk but whose content resides in the next chunk, and how it fixes them using a three-tiered strategy: moving headers to the next chunk, merging chunks, or logging warnings when size limits would be exceeded. It also details the _track_header_moved_from mechanism that maintains provenance by tracking source chunk indices in metadata. The feature has been updated to expand detection from header levels 3-6 to levels 2-6 and reduce the content threshold from 50 to 30 characters.
 
 ## Project Structure
 The dangling header prevention feature spans several modules:
@@ -64,7 +69,7 @@ MK --> TYP
 - [config.py](file://src/chunkana/config.py#L77-L81)
 
 ## Core Components
-- DanglingHeaderDetector: Identifies dangling headers by inspecting the last non-empty line of a chunk and the first line of the next chunk, focusing on header levels 3–6 and ensuring the next chunk contains content for the header.
+- DanglingHeaderDetector: Identifies dangling headers by inspecting the last non-empty line of a chunk and the first line of the next chunk, focusing on header levels 2–6 and ensuring the next chunk contains content for the header.
 - HeaderMover: Applies the three-tiered fix strategy—move header to next chunk, merge chunks, or warn when limits would be exceeded—and tracks provenance via metadata.
 - HeaderProcessor: Orchestrates detection and fixing iteratively until no more dangling headers are found, up to a safety limit.
 
@@ -125,13 +130,13 @@ Chunker-->>Client : "final chunks"
 ### DanglingHeaderDetector
 Responsibilities:
 - Detect dangling headers by scanning adjacent chunk pairs.
-- Focus on header levels 3–6 to avoid treating major section headers (levels 1–2) as dangling.
+- Focus on header levels 2–6 to avoid treating major section headers (level 1) as dangling.
 - Ensure the next chunk contains content for the header and that the dangling header is not accompanied by substantial content after it in the current chunk.
 
 Detection logic highlights:
 - Inspects the last non-empty line of the current chunk.
-- Validates it matches an ATX header pattern and falls within levels 3–6.
-- Checks that the next chunk’s first line is not a header of the same or higher level.
+- Validates it matches an ATX header pattern and falls within levels 2–6.
+- Checks that the next chunk's first line is not a header of the same or higher level.
 - Confirms the next chunk contains a minimal amount of content to qualify as dangling.
 
 ```mermaid
@@ -140,10 +145,10 @@ Start(["Start detection"]) --> GetLines["Get lines from current chunk content"]
 GetLines --> FindLast["Find last non-empty line"]
 FindLast --> IsHeader{"Matches ATX header?"}
 IsHeader --> |No| EndNo["Not dangling"]
-IsHeader --> |Yes| LevelCheck["Level >= 3?"]
+IsHeader --> |Yes| LevelCheck["Level >= 2?"]
 LevelCheck --> |No| EndNo
 LevelCheck --> |Yes| ContentAfter["Compute content after last header"]
-ContentAfter --> HasSubstantial{"Content after header > 50 chars?"}
+ContentAfter --> HasSubstantial{"Content after header > 30 chars?"}
 HasSubstantial --> |Yes| EndNo
 HasSubstantial --> |No| NextChunk["Check next chunk"]
 NextChunk --> NextEmpty{"Next chunk empty or < 20 chars?"}
@@ -154,6 +159,8 @@ NextIsHeader --> |Yes| NextLevel["Compare levels"]
 NextLevel --> |Same/higher| EndNo
 NextIsHeader --> |No| EndYes["Dangling header detected"]
 ```
+
+**Updated** Detection now includes level 2 headers and uses a reduced threshold of 30 characters.
 
 **Diagram sources**
 - [header_processor.py](file://src/chunkana/header_processor.py#L86-L150)
@@ -212,7 +219,7 @@ Responsibilities:
 ```mermaid
 flowchart TD
 Start(["prevent_dangling_headers"]) --> Init["Copy input chunks"]
-Init --> Loop{"Iteration < 10?"}
+Init --> Loop{"Iteration < 20?"}
 Loop --> |No| Safety["Log warning about max iterations reached"] --> Done
 Loop --> Detect["Detect dangling headers (detailed)"]
 Detect --> Found{"Any found?"}
@@ -221,6 +228,8 @@ Found --> |Yes| Pick["Pick first DanglingHeaderInfo"]
 Pick --> Fix["Fix with HeaderMover"]
 Fix --> Loop
 ```
+
+**Updated** The iteration limit has been increased from 10 to 20 to handle more complex nested documents.
 
 **Diagram sources**
 - [header_processor.py](file://src/chunkana/header_processor.py#L405-L473)
@@ -237,7 +246,7 @@ Fix --> Loop
 
 Concrete usage examples from the codebase:
 - header_line_in_chunk and chunk_index are used by the detector to produce DanglingHeaderInfo entries, enabling precise targeting of fixes.
-- _track_header_moved_from writes the source chunk index into the target chunk’s metadata, supporting multiple moves by storing a list when needed.
+- _track_header_moved_from writes the source chunk index into the target chunk's metadata, supporting multiple moves by storing a list when needed.
 
 **Section sources**
 - [header_processor.py](file://src/chunkana/header_processor.py#L19-L238)
@@ -286,15 +295,15 @@ Common issues and guidance:
 - Provenance tracking: If header movement metadata is missing, verify that the fix occurred and that the target chunk received the provenance field. The tracker supports multiple moves by storing a list.
 
 Interpreting warning messages:
-- “Cannot fix dangling header without exceeding size limits”: Indicates that moving or merging would violate max_chunk_size. Adjust configuration or content to fit within limits.
-- “Reached maximum iterations for dangling header fixes”: Suggests deep nesting or cycles of dangling headers. Reduce overlap or adjust thresholds to minimize fragmentation.
+- "Cannot fix dangling header without exceeding size limits": Indicates that moving or merging would violate max_chunk_size. Adjust configuration or content to fit within limits.
+- "Reached maximum iterations for dangling header fixes": Suggests deep nesting or cycles of dangling headers. Reduce overlap or adjust thresholds to minimize fragmentation.
 
 **Section sources**
 - [header_processor.py](file://src/chunkana/header_processor.py#L361-L371)
 - [header_processor.py](file://src/chunkana/header_processor.py#L441-L449)
 
 ## Conclusion
-The dangling header prevention feature in Chunkana provides robust detection and fixing of headers separated from their content. By focusing on levels 3–6, using a three-tiered fix strategy, and maintaining provenance through metadata, it preserves document coherence while respecting size constraints. The iterative processing approach ensures stability even in complex nested documents, with safeguards against infinite loops.
+The dangling header prevention feature in Chunkana provides robust detection and fixing of headers separated from their content. By focusing on levels 2–6, using a three-tiered fix strategy, and maintaining provenance through metadata, it preserves document coherence while respecting size constraints. The iterative processing approach ensures stability even in complex nested documents, with safeguards against infinite loops.
 
 [No sources needed since this section summarizes without analyzing specific files]
 
