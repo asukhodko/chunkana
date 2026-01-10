@@ -38,6 +38,14 @@ for chunk in chunks:
     print(f"Content: {chunk.content[:100]}...")
 ```
 
+## What You Get
+
+- **Structure-safe chunks**: never split code blocks, tables, lists, or LaTeX blocks
+- **Useful metadata**: `header_path`, `content_type`, line ranges, and strategy used
+- **Multiple strategies**: automatic selection or manual override
+- **Hierarchy support**: navigate a chunk tree or flatten it for indexing
+- **Streaming options**: process large files without loading them all into memory
+
 ## Why Chunkana?
 
 **Problem**: Traditional splitters break Markdown structure, fragmenting code blocks, tables, and lists.
@@ -57,6 +65,10 @@ for chunk in chunks:
 - **Hierarchical navigation**: Build chunk trees for section-aware retrieval
 - **Overlap metadata**: Context continuity without content duplication
 - **Memory efficient**: Stream large files without loading everything into RAM
+- **Code-context binding**: Keep code with the explanation around it
+- **Adaptive sizing**: Optional size tuning based on document complexity
+- **Table grouping**: Keep related tables together for better retrieval
+- **Obsidian cleanup**: Strip `^block-id` references when desired
 
 ## Usage Examples
 
@@ -72,6 +84,18 @@ config = ChunkConfig(
 )
 
 chunks = chunk_markdown(text, config)
+```
+
+### Content Analysis and Metrics
+
+```python
+from chunkana import analyze_markdown, chunk_with_metrics
+
+analysis = analyze_markdown(text)
+print(f"Code ratio: {analysis.code_ratio}")
+
+chunks, metrics = chunk_with_metrics(text)
+print(f"Average chunk size: {metrics.avg_chunk_size}")
 ```
 
 ### Hierarchical Chunking
@@ -100,6 +124,26 @@ for chunk in chunker.chunk_file_streaming("large_document.md"):
     print(f"Chunk {chunk.metadata['chunk_index']}: {chunk.size} chars")
 ```
 
+### Advanced Configuration Highlights
+
+```python
+from chunkana import ChunkConfig
+from chunkana.adaptive_sizing import AdaptiveSizeConfig
+from chunkana.table_grouping import TableGroupingConfig
+
+config = ChunkConfig(
+    max_chunk_size=4096,
+    overlap_size=200,
+    enable_code_context_binding=True,
+    preserve_latex_blocks=True,
+    strip_obsidian_block_ids=True,
+    use_adaptive_sizing=True,
+    adaptive_config=AdaptiveSizeConfig(base_size=1500, code_weight=0.4),
+    group_related_tables=True,
+    table_grouping_config=TableGroupingConfig(max_distance_lines=10),
+)
+```
+
 ### Output Formats
 
 ```python
@@ -113,6 +157,17 @@ json_output = render_json(chunks)
 # Dify-compatible format
 dify_output = render_dify_style(chunks)
 ```
+
+## Core API Surface
+
+Primary convenience functions:
+
+- `chunk_markdown(text, config=None)` → `List[Chunk]`
+- `chunk_hierarchical(text, config=None)` → `HierarchicalChunkingResult`
+- `chunk_file(path, config=None)` / `chunk_file_streaming(path, config=None)`
+- `analyze_markdown(text, config=None)` → `ContentAnalysis`
+- `chunk_with_metrics(text, config=None)` → `(List[Chunk], ChunkingMetrics)`
+- `iter_chunks(text, config=None)` → `Iterator[Chunk]`
 
 ## Metadata Schema
 
@@ -154,6 +209,8 @@ Each chunk includes rich metadata for retrieval:
 - **[Configuration](docs/config.md)** - All configuration options
 - **[Strategies](docs/strategies.md)** - How chunking strategies work
 - **[Renderers](docs/renderers.md)** - Output format options
+- **[Metadata Reference](docs/metadata.md)** - Chunk metadata definitions
+- **[Performance Guide](docs/performance.md)** - Tuning for speed and memory
 - **[API Reference](docs/api/)** - Complete API documentation
 
 ## Contributing
