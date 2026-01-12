@@ -14,7 +14,7 @@ A semantic Markdown chunker that preserves document structure for RAG and LLM pi
 pip install chunkana
 ```
 
-```python
+````python
 from chunkana import chunk_markdown
 
 text = """
@@ -36,7 +36,7 @@ chunks = chunk_markdown(text)
 for chunk in chunks:
     print(f"Lines {chunk.start_line}-{chunk.end_line}: {chunk.metadata['header_path']}")
     print(f"Content: {chunk.content[:100]}...")
-```
+````
 
 ## What You Get
 
